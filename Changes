@@ -1,5 +1,8 @@
 Revision history for Perl extension MIME::Explode.
 
+0.22  Tue May  6 10:36:39 WEST 2003
+	- a problem when decoding quoted-printable subjects was fixed.
+
 0.21  Tue Apr 22 19:15:21 WEST 2003
 	- fixed another "bug" in base64 decoding function.
 	  Thanks to Alexey Flegontov <flegontov@mosinfo.ru>

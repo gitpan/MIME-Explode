@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Tue Apr 22 19:14:06 WEST 2003
+# Last Modification: Tue May  6 10:36:16 WEST 2003
 #
 # Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.21';
+$VERSION = '0.22';
 
 use constant BUFFSIZE => 64;
 
@@ -119,7 +119,10 @@ sub _parse {
 						next;
 					}
 					if(ref($_[0]->{$tree}->{$key}) eq "HASH") { $_[0]->{$tree}->{$key}->{value} .= $_; }
-					else { $_[0]->{$tree}->{$key} .= $_; }
+					else {
+						$key eq "subject" and $_[0]->{$tree}->{$key} =~ /\?\=$/o and s/^ (?=\=\?)//o;
+						$_[0]->{$tree}->{$key} .= $_;
+					}
 					next;
 				}
 				if(exists($h_hash{$key}) && exists($_[0]->{$tree}->{$key}->{value})) {
