@@ -1,5 +1,8 @@
 Revision history for Perl extension MIME::Explode.
 
+0.30  Mon May  3 15:07:22 WEST 2004
+	- The problem with points in headers has been fixed.
+
 0.29  Tue Jan 27 16:47:42 WET 2004
 	- Now in multipart messages, incomplete headers are discarded.
 

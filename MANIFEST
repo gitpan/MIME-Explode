@@ -36,3 +36,4 @@ testmsgs/uu-junk-target.msg
 testmsgs/uu-junk.msg
 testmsgs/uu-zeegee.msg
 testmsgs/viraldoc.msg
+META.yml                                 Module meta-data (added by MakeMaker)

@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Tue Jan 27 16:42:04 WET 2004
+# Last Modification: Mon May  3 15:06:41 WEST 2004
 #
 # Copyright (c) 2004 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.29';
+$VERSION = '0.30';
 
 use constant BUFFSIZE => 64;
 
@@ -32,7 +32,7 @@ my %h_hash = (
 
 my @patterns = (
 	'^([^= ]+) *=[ \"]*([^\"]+)',
-	'^(\w[\w\-]*):[\x20\x09]*([^\x0d\x0a\f]*)[\x0d\x0a\f]+',
+	'^(\w[\w\-\.]*):[\x20\x09]*([^\x0d\x0a\f]*)[\x0d\x0a\f]+',
 	'^[\x0a\x0d]+$',
 	'^begin\s*(\d\d\d)\s*(\S+)',
 	'^From +[^ ]+ +[a-zA-Z]{3} [a-zA-Z]{3} [ \d]\d \d\d:\d\d:\d\d \d{4}( [\+\-]\d\d\d\d)?[\x0a\x0d]+',
