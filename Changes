@@ -1,6 +1,10 @@
 Revision history for Perl extension MIME::Explode.
 
-0.03  Sat Aug  3 16:08:39 WEST 2002
+0.05  Tue Aug 20 11:26:14 WEST 2002
+	- fixed the problem with rfc822_qprint and rfc822_base64 functions
+	- added new file to testmsgs directory
+
+0.04  Sat Aug  3 16:08:39 WEST 2002
 	- documentation update
 	- added "decode_subject" keyword to "new" method
 	- minor changes in example/explode.pl script

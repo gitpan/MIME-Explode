@@ -1,6 +1,6 @@
 #
 # Scan.pm
-# Last Modification: Sat Aug  3 15:53:29 WEST 2002
+# Last Modification: Tue Aug 20 10:55:04 WEST 2002
 #
 # Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -19,10 +19,10 @@ use SelfLoader;
 use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
-@EXPORT = qw();
-$VERSION = '0.04';
+@EXPORT = qw(&rfc822_base64 &rfc822_qprint);
+$VERSION = '0.05';
 
-use constant BUFFSIZE   => 64;
+use constant BUFFSIZE => 64;
 
 my %h_hash = (
 	'content-type'              => "",

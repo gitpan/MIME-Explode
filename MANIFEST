@@ -25,6 +25,7 @@ testmsgs/multi-nested2.msg
 testmsgs/multi-nested3.msg
 testmsgs/multi-simple.msg
 testmsgs/multi-weirdspace.msg
+testmsgs/qprint-evil.msg
 testmsgs/re-fwd.msg
 testmsgs/russian.msg
 testmsgs/simple.msg

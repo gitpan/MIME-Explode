@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Tue Jul 30 11:58:57 WEST 2002
+ * Last Modification: Tue Aug 20 10:59:07 WEST 2002
  *
  * Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 #ifdef OP_PROTOTYPE
-#undef OP_PROTOTYPE  
+#undef OP_PROTOTYPE
 #endif
 
 #define PERL_POLLUTE
@@ -79,18 +79,17 @@ static char *set_mime_type(unsigned char *buff, unsigned long len, char *base) {
 			buff[2] == 0xff && buff[3] == 0xe0 &&
 				strnEQ((char *)&buff[6], "JFIF", 4))
 			return("image/jpeg");
-
 		return(base ? base : "");
 	}
 }
 
-unsigned char *rfc822_qprint(unsigned char *src,
+unsigned char *_rfc822_qprint(unsigned char *src,
 			unsigned long srcl, unsigned long *len) {
 	unsigned char *ret = NULL;
 	unsigned char *d = NULL;
 	unsigned char *t = NULL;
 	unsigned char *s = src;
-	unsigned char c,e;
+	unsigned char c, e;
 
 	New(1, ret, (size_t) srcl + 1, unsigned char);
 	d = ret;
@@ -102,6 +101,7 @@ unsigned char *rfc822_qprint(unsigned char *src,
 				if(((unsigned long) (s - src)) < srcl)
 					switch (c = *s++) {
 					case '\0':
+						*d++ = '=';
 						s--;
 						break;
 					case '\015':
@@ -111,9 +111,14 @@ unsigned char *rfc822_qprint(unsigned char *src,
 						break;
 					default:
 						if(!(isxdigit(c) && (((unsigned long) (s - src)) < srcl) &&
-								(e = *s++) && isxdigit (e))) {
-							Safefree(ret);
-							return NULL;
+								(e = *s++) && isxdigit(e))) {
+						//	Safefree(ret);
+						//	return NULL;
+							*d++ = '=';
+							s -= 2;
+							if(*s == '=') s++;
+							t = d;
+							break;
 						}
 						if(isDIGIT(c)) c -= '0';
 						else c -= (isUPPER(c) ? 'A' - 10 : 'a' - 10);
@@ -122,6 +127,9 @@ unsigned char *rfc822_qprint(unsigned char *src,
 						*d++ = e + (c << 4);
 						t = d;
 						break;
+				} else {
+					*d++ = '=';
+					t = d;
 				}
 				break;
 			case ' ':
@@ -134,13 +142,14 @@ unsigned char *rfc822_qprint(unsigned char *src,
 				*d++ = c;
 				t = d;
 		}
-	}  
+	}
 	*d = '\0';
 	*len = d - ret;
 	return ret;
 }
 
-void *rfc822_base64(unsigned char *src, unsigned long srcl,
+
+void *_rfc822_base64(unsigned char *src, unsigned long srcl,
 						unsigned long *len) {
 	char c;
 	char *d;
@@ -198,7 +207,7 @@ void *rfc822_base64(unsigned char *src, unsigned long srcl,
 				case 3:
 					for(; srcl; --srcl)
 						if(!(decode[*src++] & 0300)) {
-							warn("Possible data truncation in rfc822_base64(): %.80s", (char *)src-1);
+							warn("Possible data truncation in _rfc822_base64(): %.80s", (char *)src-1);
 						}
 					break;
 				case 2:
@@ -271,8 +280,8 @@ exp_rfc822_qprint(source)
 		unsigned char *s;
 	PPCODE:
 		s = (unsigned char*)SvPV(source, srcl);
-		s = rfc822_qprint(s, (unsigned long)srcl, &len);
-		XPUSHs(sv_2mortal(newSVpv((char*)s, (STRLEN)len)));
+		if(s = _rfc822_qprint(s, (unsigned long)srcl, &len))
+			XPUSHs(sv_2mortal(newSVpv((char*)s, (STRLEN)len)));
 
 void
 exp_rfc822_base64(source)
@@ -283,8 +292,8 @@ exp_rfc822_base64(source)
 		unsigned char *s;
 	PPCODE:
 		s = (unsigned char*)SvPV(source, srcl);
-		s = rfc822_base64(s, (unsigned long)srcl, &len);
-		XPUSHs(sv_2mortal(newSVpv((char*)s, (STRLEN)len)));		
+		if(s = _rfc822_base64(s, (unsigned long)srcl, &len))
+			XPUSHs(sv_2mortal(newSVpv((char*)s, (STRLEN)len)));		
 
 void
 exp_set_content_type(source, ...)
@@ -423,7 +432,7 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 			}
 			if(!exclude) {
 				decoded = (encoding[0] == 'q') ?
-					rfc822_qprint(line, l, &len) : rfc822_base64(line, l, &len);
+					_rfc822_qprint(line, l, &len) : _rfc822_base64(line, l, &len);
 				PerlIO_write(fpout, decoded, len);
 			}
 			if(last) break;
