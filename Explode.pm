@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Thu Jul 29 14:07:24 WEST 2004
+# Last Modification: Tue Oct 26 19:20:41 WEST 2004
 #
 # Copyright (c) 2004 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.36';
+$VERSION = '0.37';
 
 use constant BUFFSIZE => 64;
 
@@ -279,6 +279,7 @@ sub _parse {
 				($tmp, $header) = (1, 1);
 				$boundary = "";
 				if($ph) {
+					return([$tree]) if($_[0]->{$base}->{'content-type'}->{value} eq "message/rfc822");
 					my @ps = split(/\./o, $tree);
 					$ps[$#ps]++;
 					$tree = join("\.", @ps);

@@ -1,5 +1,9 @@
 Revision history for Perl extension MIME::Explode.
 
+0.37  Tue Oct 26 19:23:34 WEST 2004
+	- The deep recursion on subroutine "MIME::Explode::_parse" has
+	  been fixed.
+
 0.36  Thu Jul 29 14:11:04 WEST 2004
 	- Updated the XS _rfc822_base64 function.
 	- A bug in XS exp_decode_content function was fixed (spaces and
