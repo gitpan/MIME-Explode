@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Thu Apr 10 15:34:04 WEST 2003
+ * Last Modification: Tue Apr 22 19:14:19 WEST 2003
  *
  * Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -423,7 +423,7 @@ exp_uu_file(fhs, filename, mode, ...)
 
 
 void
-exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, boundary, ...)
+exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, boundary="", ...)
 		SV	*fhs;
 		char 	*encoding;
 		char	*filename;
@@ -470,13 +470,13 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 			}
 			if(encoding[0] == 'b') {
 				if(line[0] == 0x0a && len > 0) break;
-				if(line[l-1] != 0x0a) break;
+				if(boundary[0] != '\0' && line[l-1] != 0x0a) break;
 				if(strchr(line, ' ')) {
 					part = newSVpvn(line, l);
 					break;
 				}
 			}
-			if(rest = instr(line, boundary)) {
+			if(boundary[0] != '\0' && (rest = instr(line, boundary))) {
 				part = newSVpvn(rest, strlen(rest));
 				l -= SvCUR(part);
 				if(l == 0) break;

@@ -1,5 +1,9 @@
 Revision history for Perl extension MIME::Explode.
 
+0.21  Tue Apr 22 19:15:21 WEST 2003
+	- fixed another "bug" in base64 decoding function.
+	  Thanks to Alexey Flegontov <flegontov@mosinfo.ru>
+
 0.20  Thu Apr 10 15:34:42 WEST 2003
 	- Segmentation fault in base64 decoding function have been fixed.
 

@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Thu Apr 10 15:33:47 WEST 2003
+# Last Modification: Tue Apr 22 19:14:06 WEST 2003
 #
 # Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.20';
+$VERSION = '0.21';
 
 use constant BUFFSIZE => 64;
 
@@ -193,7 +193,12 @@ sub _parse {
 							($_[0]->{$tree}->{'content-transfer-encoding'}->{value} eq "quoted-printable" && $boundary)) {
 						&set_filename($files, $_[0]->{$tree});
 						my $filepath = ($args->{output_dir}) ? join("/", $args->{output_dir}, $_[0]->{$tree}->{'content-disposition'}->{filename}) : $_[0]->{$tree}->{'content-disposition'}->{filename};
-						my $res = &decode_content($fhs, $_[0]->{$tree}->{'content-transfer-encoding'}->{value}, $filepath, $args->{check_ctype}, $_[0]->{$tree}->{'content-type'}->{value} || "", "--$boundary", $args->{ctypes});
+						my $res = &decode_content($fhs,
+								$_[0]->{$tree}->{'content-transfer-encoding'}->{value},
+								$filepath, $args->{check_ctype},
+								$_[0]->{$tree}->{'content-type'}->{value} || "",
+								$boundary ? "--$boundary" : "",
+								$args->{ctypes});
 						$_[0]->{$tree}->{'content-type'}->{value} = $res->[1] if($res->[1]);
 						$_[0]->{$tree}->{'content-disposition'}->{filepath} = $filepath unless($res->[2]);
 						$tmp = 1;
