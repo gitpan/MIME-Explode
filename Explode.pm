@@ -1,6 +1,6 @@
 #
 # Scan.pm
-# Last Modification: Fri Aug 23 12:54:23 WEST 2002
+# Last Modification: Sat Aug 24 16:58:11 WEST 2002
 #
 # Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.06';
+$VERSION = '0.07';
 
 use constant BUFFSIZE => 64;
 
@@ -156,7 +156,7 @@ sub _parse {
 								($_[0]->{$base}->{'content-type'}->{boundary} ne $_[0]->{$tree}->{'content-type'}->{boundary})) {
 							$_[0]->{"$tree.0"}->{'content-type'}->{boundary} = $_[0]->{$tree}->{'content-type'}->{boundary};
 							$_[0]->{"$tree.0"}->{'content-type'}->{value} = $_[0]->{$tree}->{'content-type'}->{value};
-							if(&_parse($fhs, "$tree.0", $_[0]->{$base}->{'content-type'}->{boundary}, $args, $files, $_[0])) {
+							if(&_parse($fhs, "$tree.0", $_[0]->{$base}->{'content-type'}->{boundary}, $args, $files, $_[0]) eq "stop") {
 								$header = 1;
 								$boundary = "";
 								my @ps = split(/\./o, $tree);
@@ -225,7 +225,7 @@ sub _parse {
 
 		if($origin && !index($_, "--$origin")) {
 			defined($fh) and &file_close($fh);
-			return(1);
+			return("stop");
 		}
 		if($boundary) {
 			if(index($_, "--$boundary--") >= 0) {
@@ -234,7 +234,7 @@ sub _parse {
 					$exclude = 1;
 					$boundary = "";
 					next;
-				} else { return(); }
+				} else { return($tree); }
 			}
 			if(index($_, "--$boundary") >= 0) {
 				defined($fh) and &file_close($fh);
@@ -480,11 +480,12 @@ not save files with specified content types
 
 =head2 parse(FILEHANDLE, FILEHANDLE)
 
-This method parse the stream and splits it into its component entities. 
-This method return a hash reference with all parts. The FILEHANDLE should 
+This method parse the stream and splits it into its component entities.
+This method return a hash reference with all parts. The FILEHANDLE should
 be a reference to a GLOB. The second argument is optional.
 
-=head2 nmsgs
+
+=head2 nmsgs()
 
 Returns the number of parsed messages.
 
