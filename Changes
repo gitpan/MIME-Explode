@@ -1,5 +1,10 @@
 Revision history for Perl extension MIME::Explode.
 
+0.12  Mon Nov 25 13:31:54 WET 2002
+	- fixed another "problem" when a mailboxes with a message without
+	  boundary termination is parsed.
+	- new test mailbox hash been added to testmsg directory
+
 0.11  Mon Nov 18 11:49:13 WET 2002
 	- lots of minor bugs was fixed.
 	- the functions tell and seek has been removed because not work
