@@ -1,8 +1,8 @@
 /*
  * Explode.xs
- * Last Modification: Mon Nov 18 11:45:56 WET 2002
+ * Last Modification: Mon Dec  9 16:29:23 WET 2002
  *
- * Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
+ * Copyright (c) 2002 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
  * it under the same terms as Perl itself.
  *
@@ -23,11 +23,53 @@
 #define BUFFLEN 256
 #define TMPBUFFLEN 2*256
 #define ISTEXT 70
+#define MBXHDRLEN 39
 
 #define JNK 0177
 #define PAD 0100
 
 #define DEC(Char) (((Char) - ' ') & 077)
+
+#ifndef isGRAPH  
+#define isGRAPH(c) (isgraph(c))
+#endif
+
+bool ismailbox(unsigned char *line) {
+	int i = 5, p = 0;
+	if(strlen(line) < MBXHDRLEN ||
+		line[0] != 'F' || line[1] != 'r' || line[2] != 'o' ||
+			line[3] != 'm' || line[4] != 0x20) return FALSE;
+	while(line[i] == ' ') i++;
+	p = i;
+	while(line[i] != '@') {
+		if(!isGRAPH(line[i])) return FALSE;
+		i++;
+	}
+	if(i-p < 1) return FALSE;
+	i += 1;
+	p = i;
+	while(line[i] != 0x20) {
+		if(!(isALNUM(line[i]) || line[i] == '_' || line[i] == '.'  ||
+			line[i] == '-')) return FALSE;
+		i++;
+	}
+	if(i-p < 4) return FALSE;
+	i += 1;
+	while(line[i] == 0x20) i++;
+	return((isALPHA(line[i]) && isALPHA(line[i+1]) && isALPHA(line[i+2]) &&
+		line[i+3] == 0x20 && isALPHA(line[i+4]) && isALPHA(line[i+5]) &&
+		isALPHA(line[i+6]) && line[i+7] == 0x20 &&
+		(line[i+8] == 0x20 || isDIGIT(line[i+8])) && isDIGIT(line[i+9]) &&
+		line[i+10] == 0x20 && isDIGIT(line[i+11]) && isDIGIT(line[i+12]) &&
+		line[i+13] == ':' && isDIGIT(line[i+14]) && isDIGIT(line[i+15]) &&
+		line[i+16] == ':' && isDIGIT(line[i+17]) && isDIGIT(line[i+18]) &&
+		line[i+19] == 0x20 && isDIGIT(line[i+20]) && isDIGIT(line[i+21]) &&
+		isDIGIT(line[i+22]) && isDIGIT(line[i+23]) && (line[i+24] == 0x0A ||
+		(line[i+24] == 0x20 && (line[i+25] == '+' || line[i+25] == '-')&&
+		isDIGIT(line[i+26]) && isDIGIT(line[i+27]) &&
+		isDIGIT(line[i+28]) && isDIGIT(line[i+29]) &&
+		line[i+30] == 0x0A))) ? TRUE : FALSE);
+}
 
 bool istext(unsigned char *buff, unsigned long l) {
 	unsigned long i = 0, n = 0;
@@ -421,6 +463,10 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 		while(fgets(line, BUFFLEN, fpin)) {
 			int l = strlen(line);
 			if(fptmp != NULL) PerlIO_write(fptmp, line, l);
+			if(encoding[0] == 'q' && ismailbox(line)) {
+				strcpy(part, line);
+				break;
+			}
 			if(encoding[0] == 'b') {
 				if(line[0] == 0x0a && len > 0) break;
 				if(line[l-1] != 0x0a) break;

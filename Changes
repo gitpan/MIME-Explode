@@ -1,5 +1,9 @@
 Revision history for Perl extension MIME::Explode.
 
+0.13  Mon Dec  9 16:38:51 WET 2002
+	- the problem with quoted-printable messages without boundary 
+	  termination is fixed.
+
 0.12  Mon Nov 25 13:31:54 WET 2002
 	- fixed another "problem" when a mailboxes with a message without
 	  boundary termination is parsed.
