@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Tue Apr 22 19:14:19 WEST 2003
+ * Last Modification: Tue Nov  4 16:49:36 WET 2003
  *
  * Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -338,6 +338,7 @@ exp_rfc822_base64(source)
 		if(s = _rfc822_base64(s, (unsigned long)srcl, &len))
 			XPUSHs(sv_2mortal(newSVpv((char*)s, (STRLEN)len)));		
 
+
 void
 exp_set_content_type(source, ...)
 		SV	*source
@@ -469,11 +470,16 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 				break;
 			}
 			if(encoding[0] == 'b') {
+				char *pos = NULL;
 				if(line[0] == 0x0a && len > 0) break;
 				if(boundary[0] != '\0' && line[l-1] != 0x0a) break;
-				if(strchr(line, ' ')) {
-					part = newSVpvn(line, l);
-					break;
+				if(pos = strchr(line, 0x20)) {
+					pos++;
+					while(*pos == 0x20) pos++;
+					if(*pos != 0x0a) {
+						part = newSVpvn(line, l);
+						break;
+					}
 				}
 			}
 			if(boundary[0] != '\0' && (rest = instr(line, boundary))) {
