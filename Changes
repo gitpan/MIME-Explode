@@ -1,5 +1,9 @@
 Revision history for Perl extension MIME::Explode.
 
+0.26  Fri Sep  5 15:54:23 WEST 2003
+	- This version fixes a bug in file attachments with semicolons in
+	  their names.
+
 0.25  Tue Aug  5 19:40:10 WEST 2003
 	- The problem with tabs in headers has been fixed
 

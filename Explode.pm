@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Tue Aug  5 15:57:05 WEST 2003
+# Last Modification: Fri Sep  5 15:54:09 WEST 2003
 #
 # Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.25';
+$VERSION = '0.26';
 
 use constant BUFFSIZE => 64;
 
@@ -36,7 +36,8 @@ my @patterns = (
 	'^[\x0a\x0d]+$',
 	'^begin\s*(\d\d\d)\s*(\S+)',
 	'^From +[^ ]+ +[a-zA-Z]{3} [a-zA-Z]{3} [ \d]\d \d\d:\d\d:\d\d \d{4}( [\+\-]\d\d\d\d)?[\x0a\x0d]+',
-	'^[\x20\x09]+(?=.*\w+)'
+	'^[\x20\x09]+(?=.*\w+)',
+	'[\x20\x09]*;[\x20\x09]*(?=[^\"]+\=[\x20\x09]*\")'
 );
 
 my %content_type = (
@@ -126,7 +127,7 @@ sub _parse {
 					next;
 				}
 				if(exists($h_hash{$key}) && exists($_[0]->{$tree}->{$key}->{value})) {
-					my @params = split(/[\x20\x09]*;[\x20\x09]*/o, $_[0]->{$tree}->{$key}->{value});
+					my @params = split(/$patterns[6]/o, $_[0]->{$tree}->{$key}->{value});
 					$_[0]->{$tree}->{$key}->{value} = shift(@params) || "";
 					map { /$patterns[0]/o and $_[0]->{$tree}->{$key}->{lc($1)} = $2; } @params;
 				} elsif($key eq "subject" && $args->{decode_subject}) {
@@ -257,7 +258,8 @@ sub _parse {
 		if($check_ctype && $args->{check_ctype}) {
 			($tmpbuff .= $_) =~ s/^[\n\r\t]+//o;
 			if(length($tmpbuff) > BUFFSIZE) {
-				if(my $ct = set_content_type($tmpbuff, $_[0]->{$tree}->{'content-type'}->{value} || "")) {
+				$_[0]->{$tree}->{'content-type'}->{value} ||= "";
+				if(my $ct = set_content_type($tmpbuff, $_[0]->{$tree}->{'content-type'}->{value})) {
 					$_[0]->{$tree}->{'content-type'}->{value} = $ct;
 					$tmpbuff = "";
 					$check_ctype = 0;
