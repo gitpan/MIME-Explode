@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Mon Feb 10 11:12:00 WET 2003
+# Last Modification: Mon Feb 24 14:27:09 WET 2003
 #
 # Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.16';
+$VERSION = '0.17';
 
 use constant BUFFSIZE => 64;
 
@@ -105,7 +105,7 @@ sub _parse {
 	my ($check_ctype, $ctlength) = (1, 0);
 	my ($ph, $tmp, $exclude, $uucount, $checkhdr) = (0, 0, 0, 0, 0);
 	my $fh;
-	while(<$fh_mail>) {
+	while(local $_ = <$fh_mail>) {
 		defined($fh_tmp) and print $fh_tmp $_;
 		if($header) {
 			($ph, $uucount, $exclude, $tmpbuff, $check_ctype, $ctlength, $ftmp) = (1, 0, 0, "", 1, 0, "");
