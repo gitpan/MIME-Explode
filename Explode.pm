@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Tue Feb 25 10:45:51 WET 2003
+# Last Modification: Mon Mar 17 16:59:49 WET 2003
 #
 # Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.18';
+$VERSION = '0.19';
 
 use constant BUFFSIZE => 64;
 
@@ -35,7 +35,7 @@ my @patterns = (
 	'^(\w[\w\-]*): *([^\x0d\x0a\x09\f]*)[\x0d\x0a\x09\f]+',
 	'^[\x0a\x0d]+$',
 	'^begin\s*(\d\d\d)\s*(\S+)',
-	'^From +[^ ]+ +[a-zA-Z]{3} +[^ ]{3} +\d{1,2} \d\d:\d\d:\d\d +\d{4}',
+	'^From +[^ ]+ +[a-zA-Z]{3} [a-zA-Z]{3} [ \d]\d \d\d:\d\d:\d\d \d{4}( [\+\-]\d\d\d\d)?[\x0a\x0d]+',
 	'^[ \t]+(?=.*\w+)'
 );
 
@@ -68,7 +68,7 @@ sub parse {
 
 	local $/ = "\n";
 	my %ctypes = ();
-	my $headers = {};
+	my %headers = ();
 	my $args = {
 		output_dir     => $self->{output_dir},
 		check_ctype    => $self->{check_content_type} || 0,
@@ -82,11 +82,11 @@ sub parse {
 		mkdir($self->{output_dir}, $self->{mkdir}) or
 			die("MIME::Explode: Failed to create directory \"" . $self->{output_dir} . "\" $!");
 	}
-	my $last = &_parse(\@_, 1, 0, "0", "", $args, {}, $headers);
+	my $last = &_parse(\@_, 1, 0, "0", "", $args, {}, \%headers);
 	$self->{nmsgs} = ($last->[0]) ? (split(/\./, $last->[0]))[0] + 1 : 0;
 	my ($fh_mail, $fh_tmp) = @_;
 	if(defined($fh_tmp)) { while(<$fh_mail>) { print $fh_tmp $_; } }
-	return($headers);
+	return(\%headers);
 }
 
 sub nmsgs { $_[0]->{'nmsgs'} }
@@ -209,7 +209,7 @@ sub _parse {
 				}
 			}
 		}
-		if($mbox && $tmp && /$patterns[4]/o) {
+		if($mbox && /$patterns[4]/o) {
 			if(scalar(@{[split(/\./o, $tree)]}) > 2) {
 				$breakmsg = $_;
 				if($boundary) { $_ = "--$boundary--\r\n"; } 

@@ -1,5 +1,9 @@
 Revision history for Perl extension MIME::Explode.
 
+0.19  Mon Mar 17 17:25:23 WET 2003
+	- This release fixes the bug where reading a mailbox without new 
+	  line between end of message and mailbox line separator.
+
 0.18  Tue Feb 25 10:46:27 WET 2003
 	- now, the line with "unistd.h" is not included in win32
 
