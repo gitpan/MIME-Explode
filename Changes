@@ -1,10 +1,15 @@
 Revision history for Perl extension MIME::Explode.
 
+0.23  Mon Jun 16 13:36:35 WEST 2003
+	- Use of uninitialized value in internal _parse function has been
+	  fixed.
+	- Code cleanup.
+
 0.22  Tue May  6 10:36:39 WEST 2003
-	- a problem when decoding quoted-printable subjects was fixed.
+	- A problem when decoding quoted-printable subjects was fixed.
 
 0.21  Tue Apr 22 19:15:21 WEST 2003
-	- fixed another "bug" in base64 decoding function.
+	- Fixed another "bug" in base64 decoding function.
 	  Thanks to Alexey Flegontov <flegontov@mosinfo.ru>
 
 0.20  Thu Apr 10 15:34:42 WEST 2003

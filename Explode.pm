@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Tue May  6 10:36:16 WEST 2003
+# Last Modification: Mon Jun 16 13:35:54 WEST 2003
 #
 # Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.22';
+$VERSION = '0.23';
 
 use constant BUFFSIZE => 64;
 
@@ -132,7 +132,7 @@ sub _parse {
 				} elsif($key eq "subject" && $args->{decode_subject}) {
 					my @parts = &decode_mimewords($_[0]->{$tree}->{subject});
 					delete($_[0]->{$tree}->{subject});
-					$_[0]->{$tree}->{subject}->{value} = [map {$_->[0]} @parts];
+					$_[0]->{$tree}->{subject}->{value} = [map {$_->[0] || ""} @parts];
 					$_[0]->{$tree}->{subject}->{charset} = [map {$_->[1] || "us-ascii"} @parts];
 				}
 			}
@@ -361,17 +361,16 @@ sub check_filename {
 
 sub decode_mimewords {
 	my $encstr = shift;
-	my @tokens;
+	my @tokens = ();
 	$@ = '';
 	$encstr =~ s/(\?\=)\r?\n[ \t](\=\?)/$1$2/ogs;
 	pos($encstr) = 0;
-	my($charset, $encoding, $enc, $dec);
 	while (1) {
 		last if(pos($encstr) >= length($encstr));
 		my $pos = pos($encstr);
 		if($encstr =~ /\G=\?([^?]*)\?([bq])\?([^?]+)\?=/ogi) {
-			($charset, $encoding, $enc) = ($1, lc($2), $3);
-			$dec = ($encoding eq "q") ? rfc822_qprint($enc) : rfc822_base64($enc);
+			my ($charset, $encoding, $enc) = ($1, lc($2), $3);
+			my $dec = ($encoding eq "q") ? rfc822_qprint($enc) : rfc822_base64($enc);
 			push(@tokens, [$dec, $charset]);
 			next;
 		}
