@@ -10,10 +10,13 @@ my $start = new Benchmark;
 my $mail = shift(@ARGV) || die("no args");
 die("Unable to open file \"$mail\"") unless(-e $mail);
 
+my $decode_subject = 1;
+
 my $output = "file.tmp";
 my $explode = MIME::Explode->new(
 	output_dir         => "tmp",
 	mkdir              => 0755,
+	decode_subject     => $decode_subject,
 	check_content_type => 1,
 	exclude_types      => ["image/gif", "image/jpeg"],
 );
@@ -31,14 +34,18 @@ for my $msg (sort{ $a cmp $b } keys(%{$headers})) {
 	for my $k (keys(%{$headers->{$msg}})) {
 		if(ref($headers->{$msg}->{$k}) eq "ARRAY") {
 			for my $i (0 .. $#{$headers->{$msg}->{$k}}) {
-				print "$msg => $k => $i => " . $headers->{$msg}->{$k}->[$i] . "\n";
+				print "$msg => $k => $i => ", $headers->{$msg}->{$k}->[$i], "\n";
 			}
 		} elsif(ref($headers->{$msg}->{$k}) eq "HASH") {
 			for my $ks (keys(%{$headers->{$msg}->{$k}})) {
-				print "$msg => $k => $ks => " . $headers->{$msg}->{$k}->{$ks} . "\n";
+				if(ref($headers->{$msg}->{$k}->{$ks}) eq "ARRAY") {
+					print "$msg => $k => $ks => ", join(($ks eq "charset") ? " " : "", @{$headers->{$msg}->{$k}->{$ks}}), "\n";
+				} else {
+					print "$msg => $k => $ks => ", $headers->{$msg}->{$k}->{$ks}, "\n";
+				}
 			}
 		} else {
-			print "$msg => $k => " . $headers->{$msg}->{$k} . "\n";
+			print "$msg => $k => ", $headers->{$msg}->{$k}, "\n";
 		}
 	}
 }

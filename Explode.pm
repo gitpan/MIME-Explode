@@ -1,6 +1,6 @@
 #
 # Scan.pm
-# Last Modification: Tue Jul 30 11:59:36 WEST 2002
+# Last Modification: Sat Aug  3 15:53:29 WEST 2002
 #
 # Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw();
-$VERSION = '0.03';
+$VERSION = '0.04';
 
 use constant BUFFSIZE   => 64;
 
@@ -55,6 +55,7 @@ sub new {
 	my $self  = {
 		output_dir         => "/tmp",
 		mkdir              => 0,
+		decode_subject     => 0,
 		check_content_type => 0,
 		exclude_types      => [],
 		@_,
@@ -70,8 +71,9 @@ sub parse {
 	my %ctypes = ();
 	my $headers = {};
 	my $args = {
-		output_dir  => $self->{output_dir},
-		check_ctype => $self->{check_content_type} || 0,
+		output_dir     => $self->{output_dir},
+		check_ctype    => $self->{check_content_type} || 0,
+		decode_subject => $self->{decode_subject},
 	};
 	if(scalar(@{$self->{exclude_types}})) {
 		@ctypes{@{$self->{exclude_types}}} = (0 .. $#{$self->{exclude_types}});
@@ -121,6 +123,11 @@ sub _parse {
 					my @params = split(/ *; */o, $_[0]->{$tree}->{$key}->{value});
 					$_[0]->{$tree}->{$key}->{value} = shift(@params) || "";
 					map { /$patterns[0]/o and $_[0]->{$tree}->{$key}->{lc($1)} = $2; } @params;
+				} elsif($key eq "subject" && $args->{decode_subject}) {
+					my @parts = &decode_mimewords($_[0]->{$tree}->{subject});
+					delete($_[0]->{$tree}->{subject});
+					$_[0]->{$tree}->{subject}->{value} = [map {$_->[0]} @parts];
+					$_[0]->{$tree}->{subject}->{charset} = [map {$_->[1] || "us-ascii"} @parts];
 				}
 			}
 			if(/$patterns[1]/o) {
@@ -383,6 +390,7 @@ MIME::Explode - Perl extension for explode MIME messages
   my $explode = MIME::Explode->new(
     output_dir         => "tmp",
     mkdir              => 0755,
+    decode_subject     => 1,
     check_content_type => 1,
     exclude_types      => ["image/gif", "image/jpeg", "image/png"],
   );
@@ -403,6 +411,11 @@ MIME::Explode - Perl extension for explode MIME messages
         }
       } elsif(ref($headers->{$msg}->{$k}) eq "HASH") {
         for my $ks (keys(%{$headers->{$msg}->{$k}})) {
+          if(ref($headers->{$msg}->{$k}->{$ks}) eq "ARRAY") {
+            print "$msg => $k => $ks => ", join(($ks eq "charset") ? " " : "", @{$headers->{$msg}->{$k}->{$ks}}), "\n";
+          } else {
+            print "$msg => $k => $ks => ", $headers->{$msg}->{$k}->{$ks}, "\n";
+          }
           print "$msg => $k => $ks => ", $headers->{$msg}->{$k}->{$ks}, "\n";
         }
       } else {
@@ -425,7 +438,7 @@ out of a MIME encoded email messages or mailboxes.
 This method create a new MIME::Explode object. The following keys are
 available:
 
-=over 4
+=over 5
 
 =item output_dir
 
@@ -439,6 +452,14 @@ if the value is set to octal number then make the output_dir directory
 =item check_content_type => 0 or 1
 
 if the value is set to 1 the content-type of file is checked
+
+=item decode_subject => 0 or 1
+
+if the value is set to 1 then the subject is decoded into a list.
+
+  $header->{'0.0'}->{subject}->{value} = [ARRAYREF];
+  $header->{'0.0'}->{subject}->{charset} = [ARRAYREF];
+  $subject = join("", @{$header->{'0.0'}->{subject}->{value}});
 
 =item exclude_types => [ARRAYREF]
 

@@ -1,5 +1,10 @@
 Revision history for Perl extension MIME::Explode.
 
+0.03  Sat Aug  3 16:08:39 WEST 2002
+	- documentation update
+	- added "decode_subject" keyword to "new" method
+	- minor changes in example/explode.pl script
+
 0.03  Wed Jul 31 12:29:34 WEST 2002
 	- minor bugfixes in Explode.xs
 	- now, decode quoted-printable files
