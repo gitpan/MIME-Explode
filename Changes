@@ -1,5 +1,8 @@
 Revision history for Perl extension MIME::Explode.
 
+0.34  Tue May 25 20:02:30 WEST 2004
+	- This version fixes a bug in "uu" decode function.
+
 0.33  Tue May 25 12:01:32 WEST 2004
 	- New keywords ("content_types" and "types_action") have been
 	  added to the constructor function.

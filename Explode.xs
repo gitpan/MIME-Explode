@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Mon May 24 17:12:39 WEST 2004
+ * Last Modification: Tue May 25 20:02:18 WEST 2004
  *
  * Copyright (c) 2004 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -389,8 +389,8 @@ exp_uu_file(fhs, filename, mode, ...)
 		} else
 			croak("Null Array Reference");
 
-		if(items == 5) {
-			HV *hv = (HV*)SvRV(ST(4));
+		if(items == 4) {
+			HV *hv = (HV*)SvRV(ST(3));
 			if(hv_exists(hv, "action", 6)) {
 				SV **value = hv_fetch(hv, "action", 6, 0);
 				action = SvIVx(*value);
