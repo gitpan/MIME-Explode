@@ -1,5 +1,9 @@
 Revision history for Perl extension MIME::Explode.
 
+0.14  Fri Dec 13 15:42:54 WET 2002
+	- fix for fgets to avoid occasional core dump in RedHat 8.0.
+	  The fgets function was replaced with perl sv_gets function.
+
 0.13  Mon Dec  9 16:38:51 WET 2002
 	- the problem with quoted-printable messages without boundary 
 	  termination is fixed.

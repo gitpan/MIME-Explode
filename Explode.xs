@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Mon Dec  9 16:29:23 WET 2002
+ * Last Modification: Fri Dec 13 15:27:17 WET 2002
  *
  * Copyright (c) 2002 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -358,13 +358,13 @@ exp_uu_file(fhs, filename, mode, ...)
 		char	*filename;
 		char	*mode
 	PREINIT:
-		PerlIO *fpin  = NULL;
+		PerlIO *fpin = NULL;
 		PerlIO *fptmp = NULL;
 		PerlIO *fpout = NULL;
 		I32 avlen = 0;
 		AV *av_fhs = (AV*)SvRV(fhs);
 		HV *hvtypes;
-		char line[BUFFLEN];
+		SV *buff_sv = newSV(BUFFLEN);
 		unsigned long len = 0;
 		unsigned char *decoded = NULL;
 		bool verify = TRUE;
@@ -386,8 +386,9 @@ exp_uu_file(fhs, filename, mode, ...)
 		if((fpout = PerlIO_open(filename, "wb")) == NULL)
 			croak("Failed to open file \"%s\"", filename);
 
-		while(fgets(line, BUFFLEN, fpin)) {
-			int l = strlen(line);
+		while(sv_gets(buff_sv, fpin, 0)) {
+			STRLEN l = SvCUR(buff_sv);
+			char *line = SvGROW(buff_sv, l);
 			if(line[l-1] != '\n') break;
 			if(fptmp != NULL) PerlIO_write(fptmp, line, l);
 			if(instr(line, "end\n")) break;
@@ -429,12 +430,12 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 		char	*mimetype;
 		char 	*boundary;
 	PREINIT:
-		PerlIO *fpin  = NULL;
+		PerlIO *fpin = NULL;
 		PerlIO *fptmp = NULL;
 		PerlIO *fpout = NULL;
 		unsigned char *decoded = NULL;
 		unsigned char *rest = NULL;
-		char line[BUFFLEN];
+		SV *buff_sv = newSV(BUFFLEN);
 		char part[BUFFLEN] = "";
 		char mt[BUFFLEN] = "";
 		bool last = FALSE;
@@ -454,14 +455,13 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 				fptmp = IoIFP(sv_2io(*av_fetch(av_fhs, 1, 0)));
 		} else
 			croak("Null Array Reference");
-
 		if(items == 7)
 			hvtypes = (HV*)SvRV(ST(6));
 		if((fpout = PerlIO_open(filename, "wb")) == NULL)
 			croak("Failed to open file \"%s\"", filename);
-
-		while(fgets(line, BUFFLEN, fpin)) {
-			int l = strlen(line);
+		while(sv_gets(buff_sv, fpin, 0)) {
+			STRLEN l = SvCUR(buff_sv);
+			char *line = SvGROW(buff_sv, l);
 			if(fptmp != NULL) PerlIO_write(fptmp, line, l);
 			if(encoding[0] == 'q' && ismailbox(line)) {
 				strcpy(part, line);
@@ -506,7 +506,6 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 		if(exclude)
 			if(unlink(filename))
 				croak("Failed to delete file \"%s\"", filename);
-
 		av_push(av_ret, part ? newSVpv(part, 0) : newSVsv(&sv_undef));
 		av_push(av_ret, mt ? newSVpv(mt, 0) : newSVsv(&sv_undef));
 		av_push(av_ret, newSViv(exclude ? 1 : 0));
