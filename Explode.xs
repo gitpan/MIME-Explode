@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Sat Jul 20 17:36:18 WEST 2002
+ * Last Modification: Tue Jul 30 11:58:57 WEST 2002
  *
  * Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -246,17 +246,16 @@ void *uu_decode(char *buff, unsigned long srcl, unsigned long *len) {
 	return(ret);
 }
 
-void str_cat(unsigned char* tmp, unsigned char* decoded,
-			unsigned long *tmplen, unsigned long len) {
-	int i;
+
+void data_cat(char* tmp, char* data,
+		unsigned long *tmplen, unsigned long len) {
+	unsigned int i = 0;
 	for(i = 0; i < len; i++) {
-		if(*tmplen+i > TMPBUFFLEN-1) {
-			tmp[*tmplen+i] = '\0';
-			break;
-		}
-		tmp[*tmplen+i] = decoded[i];
+		if(*tmplen > TMPBUFFLEN-1) break;
+		tmp[*tmplen] = data[i];
+		(*tmplen)++;
 	}
-	*tmplen += i;
+	tmp[*tmplen] = '\0';
 }
 
 MODULE = MIME::Explode	PACKAGE = MIME::Explode	PREFIX = exp_
@@ -347,7 +346,7 @@ exp_uu_file(fhs, filename, mode, ...)
 			}
 			if(verify) {
 				if(line[0] == 0x20 || line[0] == 0x0a || line[0] == 0x0d) continue;
-				str_cat(tmp, decoded, &tmplen, len);
+				data_cat(tmp, decoded, &tmplen, len);
 				if(tmplen < TMPBUFFLEN) continue;
 				strcpy(mimetype, set_mime_type(tmp, tmplen, mimetype));
 				if(hv_exists(hvtypes, mimetype, strlen(mimetype)))
@@ -371,8 +370,9 @@ exp_uu_file(fhs, filename, mode, ...)
 
 
 void
-exp_base64_file(fhs, filename, checktype = 0, mimetype, boundary, ...)
+exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, boundary, ...)
 		SV	*fhs;
+		char 	*encoding;
 		char	*filename;
 		int	checktype;
 		char	*mimetype;
@@ -394,7 +394,7 @@ exp_base64_file(fhs, filename, checktype = 0, mimetype, boundary, ...)
 		AV *av_ret = newAV();
 		AV *av_fhs = (AV*)SvRV(fhs);
 		unsigned long len = 0;
-		unsigned char tmp[TMPBUFFLEN];
+		char tmp[TMPBUFFLEN];
 		unsigned long tmplen = 0;
 	PPCODE:
 		if((avlen = av_len(av_fhs)) != -1) {
@@ -404,8 +404,8 @@ exp_base64_file(fhs, filename, checktype = 0, mimetype, boundary, ...)
 		} else
 			croak("Null Array Reference");
 
-		if(items == 6)
-			hvtypes = (HV*)SvRV(ST(5));
+		if(items == 7)
+			hvtypes = (HV*)SvRV(ST(6));
 		if((fpout = PerlIO_open(filename, "wb")) == NULL)
 			croak("Failed to open file \"%s\"", filename);
 
@@ -413,7 +413,7 @@ exp_base64_file(fhs, filename, checktype = 0, mimetype, boundary, ...)
 			int l = strlen(line);
 			if(line[l-1] != 0x0a) break;
 			if(fptmp != NULL) PerlIO_write(fptmp, line, l);
-			if(line[0] == 0x0a && len > 0) break;
+			if(encoding[0] == 'b' && line[0] == 0x0a && len > 0) break;
 			if(rest = instr(line, boundary)) {
 				strcpy(part, rest);
 				l -= strlen(part);
@@ -422,14 +422,15 @@ exp_base64_file(fhs, filename, checktype = 0, mimetype, boundary, ...)
 				last = TRUE;
 			}
 			if(!exclude) {
-				decoded = rfc822_base64(line, l, &len);
+				decoded = (encoding[0] == 'q') ?
+					rfc822_qprint(line, l, &len) : rfc822_base64(line, l, &len);
 				PerlIO_write(fpout, decoded, len);
 			}
 			if(last) break;
 
 			if(verify) {
-				if(line[0] == 0x20 || line[0] == 0x0a || line[0] == 0x0d) continue;
-				str_cat(tmp, decoded, &tmplen, len);
+				if((encoding[0] == 'b' && line[0] == 0x20) || line[0] == 0x0a || line[0] == 0x0d) continue;
+				data_cat(tmp, decoded, &tmplen, len);
 				if(tmplen < TMPBUFFLEN) continue;
 				strcpy(mt, (checktype) ? set_mime_type(tmp, tmplen, mimetype) : mimetype);
 				if(hv_exists(hvtypes, mt, strlen(mt)))

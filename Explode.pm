@@ -1,6 +1,6 @@
 #
 # Scan.pm
-# Last Modification: Sat Jul 27 15:12:29 WEST 2002
+# Last Modification: Tue Jul 30 11:59:36 WEST 2002
 #
 # Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw();
-$VERSION = '0.02';
+$VERSION = '0.03';
 
 use constant BUFFSIZE   => 64;
 
@@ -81,7 +81,7 @@ sub parse {
 		mkdir($self->{output_dir}, $self->{mkdir}) or
 			die("MIME::Explode: Failed to create directory \"" . $self->{output_dir} . "\" $!");
 	}
-	&_parse(\@_, "0.0", "", $args, $headers);
+	&_parse(\@_, "0.0", "", $args, {}, $headers);
 	my ($fh_mail, $fh_tmp) = @_;
 	if(defined($fh_tmp)) { while(<$fh_mail>) { print $fh_tmp $_; } }
 	return($headers);
@@ -92,8 +92,8 @@ sub _parse {
 	my $base = shift || "0.0";
 	my $origin = shift || "";
 	my $args = shift;
+	my $files = shift;
 
-	my %files = ();
 	my ($fh_mail, $fh_tmp) = @{$fhs};
 	my ($tree, $key, $tmpbuff, $boundary, $ftmp) = ("", "", "", "", "");
 	my ($header, $check_ctype, $ctlength) = (1, 1, 0);
@@ -147,11 +147,11 @@ sub _parse {
 								($_[0]->{$base}->{'content-type'}->{boundary} ne $_[0]->{$tree}->{'content-type'}->{boundary})) {
 							$_[0]->{"$tree.0"}->{'content-type'}->{boundary} = $_[0]->{$tree}->{'content-type'}->{boundary};
 							$_[0]->{"$tree.0"}->{'content-type'}->{value} = $_[0]->{$tree}->{'content-type'}->{value};
-							&_parse($fhs, "$tree.0", "", $args, $_[0]);
+							&_parse($fhs, "$tree.0", "", $args, $files, $_[0]);
 						}
 						next;
 					}
-					&_parse($fhs, "$tree.0", $_[0]->{$base}->{'content-type'}->{boundary}, $args, $_[0])
+					&_parse($fhs, "$tree.0", $_[0]->{$base}->{'content-type'}->{boundary}, $args, $files, $_[0])
 						if($_[0]->{$tree}->{'content-type'}->{value} eq "message/rfc822");
 				}
 			} else {
@@ -163,7 +163,7 @@ sub _parse {
 		$key = "";
 		!defined($_) and next;
 		if(/$patterns[3]/o) {
-			my $file = &check_filename(\%files, $2);
+			my $file = &check_filename($files, $2);
 			my $filepath = ($args->{output_dir}) ? join("/", $args->{output_dir}, $file) : $file;
 			my $res = uu_file($fhs, $filepath, $1 || "644", $args->{ctypes});
 			$_[0]->{"$tree.$uucount"}->{'content-type'}->{value} = $res->[0];
@@ -182,10 +182,11 @@ sub _parse {
 				if(exists($_[0]->{$tree}->{'content-transfer-encoding'}) &&
 						exists($_[0]->{$tree}->{'content-transfer-encoding'}->{value})) {
 					$_[0]->{$tree}->{'content-transfer-encoding'}->{value} = lc($_[0]->{$tree}->{'content-transfer-encoding'}->{value});
-					if($_[0]->{$tree}->{'content-transfer-encoding'}->{value} eq "base64") {
-						&set_filename(\%files, $_[0]->{$tree});
+					if($_[0]->{$tree}->{'content-transfer-encoding'}->{value} eq "base64" ||
+							($_[0]->{$tree}->{'content-transfer-encoding'}->{value} eq "quoted-printable" && $boundary)) {
+						&set_filename($files, $_[0]->{$tree});
 						my $filepath = ($args->{output_dir}) ? join("/", $args->{output_dir}, $_[0]->{$tree}->{'content-disposition'}->{filename}) : $_[0]->{$tree}->{'content-disposition'}->{filename};
-						my $res = &base64_file($fhs, $filepath, $args->{check_ctype}, $_[0]->{$tree}->{'content-type'}->{value}, "--$boundary", $args->{ctypes});
+						my $res = &decode_content($fhs, $_[0]->{$tree}->{'content-transfer-encoding'}->{value}, $filepath, $args->{check_ctype}, $_[0]->{$tree}->{'content-type'}->{value}, "--$boundary", $args->{ctypes});
 						$_[0]->{$tree}->{'content-type'}->{value} = $res->[1] if($res->[1]);
 						$_[0]->{$tree}->{'content-disposition'}->{filepath} = $filepath unless($res->[2]);
 						unless($_ = $res->[0]) {
@@ -252,7 +253,7 @@ sub _parse {
 			}
 		}
 		unless(defined($fh)) {
-			&set_filename(\%files, $_[0]->{$tree});
+			&set_filename($files, $_[0]->{$tree});
 			$_[0]->{$tree}->{'content-disposition'}->{filepath} = ($args->{output_dir}) ?
 				join("/", $args->{output_dir}, $_[0]->{$tree}->{'content-disposition'}->{filename}) :
 					$_[0]->{$tree}->{'content-disposition'}->{filename};
@@ -268,7 +269,7 @@ sub _parse {
 				$_ = join("", $ftmp, $_);
 				$ftmp = "";
 			}
-			print $fh $_;
+			print $fh ($_[0]->{$tree}->{'content-transfer-encoding'}->{value} eq "quoted-printable") ? rfc822_qprint($_) : $_;
 			next unless(exists($_[0]->{$tree}->{'content-length'}));
 			if(($ctlength += length()) >= $_[0]->{$tree}->{'content-length'}) {
 				defined($fh) and &file_close($fh);
@@ -289,6 +290,7 @@ sub file_close {
 sub file_open {
 	my $path = shift;
 	local *FILE;
+	if($path =~ /^(.+)$/) { $path = $1; }
 	open(FILE, ">$path") or
 		die("MIME::Explode: Couldn't open file.tmp for writing: $!\n");
 	binmode(FILE);

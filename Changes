@@ -1,5 +1,12 @@
 Revision history for Perl extension MIME::Explode.
 
+0.03  Wed Jul 31 12:29:34 WEST 2002
+	- minor bugfixes in Explode.xs
+	- now, decode quoted-printable files
+	- fixed the problem with file names
+	- the problems resulting from running scripts in taint mode (-T)
+	  was resolved.
+
 0.02  Sat Jul 27 15:15:40 WEST 2002
 	- code cleanup
 	- now, "x-received" header is acceded via array reference
