@@ -1,5 +1,9 @@
 Revision history for Perl extension MIME::Explode.
 
+0.24  Fri Jun 20 14:43:49 WEST 2003
+	- This version fixes a bug that caused failures when filename have 
+	  only spaces.
+
 0.23  Mon Jun 16 13:36:35 WEST 2003
 	- Use of uninitialized value in internal _parse function has been
 	  fixed.

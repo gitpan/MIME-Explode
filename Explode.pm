@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Mon Jun 16 13:35:54 WEST 2003
+# Last Modification: Fri Jun 20 14:38:49 WEST 2003
 #
 # Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.23';
+$VERSION = '0.24';
 
 use constant BUFFSIZE => 64;
 
@@ -312,9 +312,9 @@ sub file_close {
 sub file_open {
 	my $path = shift;
 	local *FILE;
+
 	if($path =~ /^(.+)$/) { $path = $1; }
-	open(FILE, ">$path") or
-		die("MIME::Explode: Couldn't open $path for writing: $!\n");
+	open(FILE, ">$path") or die("MIME::Explode: Couldn't open $path for writing: $!\n");
 	binmode(FILE);
 	return *FILE;
 }
@@ -332,6 +332,7 @@ sub set_filename {
 		my $ctype = lc($h->{'content-type'}->{value});
 		$file .= $content_type{$ctype} || "";
 	}
+	$file =~ s/^[ \.]+$/file/o;
 	$h->{'content-disposition'}->{filename} = &check_filename($files, $file);
 	$h->{'content-transfer-encoding'}->{value} = "" unless(exists($h->{'content-transfer-encoding'}->{value}));
 
