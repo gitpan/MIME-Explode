@@ -1,5 +1,15 @@
 Revision history for Perl extension MIME::Explode.
 
+0.06  Fri Aug 23 13:00:53 WEST 2002
+	- fixed the problem with the wrong headers
+	  (1: X-Mailer: Microsoft Outlook Express 5.50.4522.1200)
+	- the problem with messages from "Mac" without "--boundary--"
+	  string as fixed
+	- added "nmsgs" method
+	- some bugs were fixed
+	- code cleanup in "explode.pl" example script
+	- updated the documentation
+
 0.05  Tue Aug 20 11:26:14 WEST 2002
 	- fixed the problem with rfc822_qprint and rfc822_base64 functions
 	- added new file to testmsgs directory

@@ -1,6 +1,6 @@
 #
 # Scan.pm
-# Last Modification: Tue Aug 20 10:55:04 WEST 2002
+# Last Modification: Fri Aug 23 12:54:23 WEST 2002
 #
 # Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.05';
+$VERSION = '0.06';
 
 use constant BUFFSIZE => 64;
 
@@ -32,12 +32,11 @@ my %h_hash = (
 
 my @patterns = (
 	'^([^=]+) ?=[ \"]*([^\"]+)',
-	'^(\w[\w\-]+): *([^\x0d\x0a\x09\f]*)[\x0d\x0a\x09\f]+',
-	'^[\n\r]$',
+	'^(\w[\w\-]*): *([^\x0d\x0a\x09\f]*)[\x0d\x0a\x09\f]+',
+	'^[\x0a\x0d]+$',
 	'^begin\s*(\d\d\d)\s*(\S+)',
 	'^From +[^ ]+ +[a-zA-Z]{3} +[^ ]{3} +\d{1,2} \d\d:\d\d:\d\d +\d{4}',
-	'^[ \t]+(?=.*\w+)',
-	'^[\n\r]+$',
+	'^[ \t]+(?=.*\w+)'
 );
 
 my %content_type = (
@@ -83,11 +82,14 @@ sub parse {
 		mkdir($self->{output_dir}, $self->{mkdir}) or
 			die("MIME::Explode: Failed to create directory \"" . $self->{output_dir} . "\" $!");
 	}
-	&_parse(\@_, "0.0", "", $args, {}, $headers);
+	my $last = &_parse(\@_, "0.0", "", $args, {}, $headers);
+	$self->{nmsgs} = ($last) ? (split(/\./, $last))[0] + 1 : 0;
 	my ($fh_mail, $fh_tmp) = @_;
 	if(defined($fh_tmp)) { while(<$fh_mail>) { print $fh_tmp $_; } }
 	return($headers);
 }
+
+sub nmsgs { $_[0]->{'nmsgs'} }
 
 sub _parse {
 	my $fhs = shift;
@@ -144,7 +146,7 @@ sub _parse {
 				}
 				next;
 			}
-			next if(!$checkhdr && (length() <= 2) && /$patterns[6]/o);
+			next if(!$checkhdr && (length() <= 2) && /$patterns[2]/o);
 			$header = 0;
 			if($tree) {
 				if(exists($_[0]->{$tree}->{'content-type'}) && exists($_[0]->{$tree}->{'content-type'}->{value})) {
@@ -154,7 +156,13 @@ sub _parse {
 								($_[0]->{$base}->{'content-type'}->{boundary} ne $_[0]->{$tree}->{'content-type'}->{boundary})) {
 							$_[0]->{"$tree.0"}->{'content-type'}->{boundary} = $_[0]->{$tree}->{'content-type'}->{boundary};
 							$_[0]->{"$tree.0"}->{'content-type'}->{value} = $_[0]->{$tree}->{'content-type'}->{value};
-							&_parse($fhs, "$tree.0", "", $args, $files, $_[0]);
+							if(&_parse($fhs, "$tree.0", $_[0]->{$base}->{'content-type'}->{boundary}, $args, $files, $_[0])) {
+								$header = 1;
+								$boundary = "";
+								my @ps = split(/\./o, $tree);
+								$ps[$#ps]++;
+								$tree = join("\.", @ps);
+							}
 						}
 						next;
 					}
@@ -196,6 +204,7 @@ sub _parse {
 						my $res = &decode_content($fhs, $_[0]->{$tree}->{'content-transfer-encoding'}->{value}, $filepath, $args->{check_ctype}, $_[0]->{$tree}->{'content-type'}->{value}, "--$boundary", $args->{ctypes});
 						$_[0]->{$tree}->{'content-type'}->{value} = $res->[1] if($res->[1]);
 						$_[0]->{$tree}->{'content-disposition'}->{filepath} = $filepath unless($res->[2]);
+						$tmp = 1;
 						unless($_ = $res->[0]) {
 							$exclude = 1;
 							next;
@@ -215,8 +224,8 @@ sub _parse {
 		next if(!defined($fh) && $tmp);
 
 		if($origin && !index($_, "--$origin")) {
-			&file_close($fh) if(defined($fh));
-			return();
+			defined($fh) and &file_close($fh);
+			return(1);
 		}
 		if($boundary) {
 			if(index($_, "--$boundary--") >= 0) {
@@ -268,7 +277,7 @@ sub _parse {
 			$fh = &file_open($_[0]->{$tree}->{'content-disposition'}->{filepath});
 		}
 		if(defined($fh)) {
-			if(!$ftmp && (length() <= 2) && /$patterns[6]/o) {
+			if(!$ftmp && (length() <= 2) && /$patterns[2]/o) {
 				$ftmp .= $_;
 				next;
 			}
@@ -286,7 +295,7 @@ sub _parse {
 		}
 	}
 	defined($fh) and &file_close($fh);
-	return();
+	return($tree);
 }
 
 sub file_close {
@@ -395,6 +404,8 @@ MIME::Explode - Perl extension for explode MIME messages
     exclude_types      => ["image/gif", "image/jpeg", "image/png"],
   );
 
+  print "Number of messages: ", $explode->nmsgs, "\n";
+
   open(MAIL, "<file.mbox") or
 	die("Couldn't open file.mbox for reading: $!\n");
   open(OUTPUT, ">file.tmp")
@@ -403,23 +414,23 @@ MIME::Explode - Perl extension for explode MIME messages
   close(OUTPUT);
   close(MAIL);
 
-  for my $msg (sort{ $a cmp $b } keys(%{$headers})) {
-    for my $k (keys(%{$headers->{$msg}})) {
-      if(ref($headers->{$msg}->{$k}) eq "ARRAY") {
-        for my $i (0 .. $#{$headers->{$msg}->{$k}}) {
-          print "$msg => $k => $i => ", $headers->{$msg}->{$k}->[$i], "\n";
+  for my $part (sort{ $a cmp $b } keys(%{$headers})) {
+    for my $k (keys(%{$headers->{$part}})) {
+      if(ref($headers->{$part}->{$k}) eq "ARRAY") {
+        for my $i (0 .. $#{$headers->{$part}->{$k}}) {
+          print "$part => $k => $i => ", $headers->{$part}->{$k}->[$i], "\n";
         }
-      } elsif(ref($headers->{$msg}->{$k}) eq "HASH") {
-        for my $ks (keys(%{$headers->{$msg}->{$k}})) {
-          if(ref($headers->{$msg}->{$k}->{$ks}) eq "ARRAY") {
-            print "$msg => $k => $ks => ", join(($ks eq "charset") ? " " : "", @{$headers->{$msg}->{$k}->{$ks}}), "\n";
+      } elsif(ref($headers->{$part}->{$k}) eq "HASH") {
+        for my $ks (keys(%{$headers->{$part}->{$k}})) {
+          if(ref($headers->{$part}->{$k}->{$ks}) eq "ARRAY") {
+            print "$part => $k => $ks => ", join(($ks eq "charset") ? " " : "", @{$headers->{$part}->{$k}->{$ks}}), "\n";
           } else {
-            print "$msg => $k => $ks => ", $headers->{$msg}->{$k}->{$ks}, "\n";
+            print "$part => $k => $ks => ", $headers->{$part}->{$k}->{$ks}, "\n";
           }
-          print "$msg => $k => $ks => ", $headers->{$msg}->{$k}->{$ks}, "\n";
+          print "$part => $k => $ks => ", $headers->{$part}->{$k}->{$ks}, "\n";
         }
       } else {
-        print "$msg => $k => ", $headers->{$msg}->{$k}, "\n";
+        print "$part => $k => ", $headers->{$part}->{$k}, "\n";
       }
     }
   }
@@ -472,6 +483,10 @@ not save files with specified content types
 This method parse the stream and splits it into its component entities. 
 This method return a hash reference with all parts. The FILEHANDLE should 
 be a reference to a GLOB. The second argument is optional.
+
+=head2 nmsgs
+
+Returns the number of parsed messages.
 
 =head1 AUTHOR
 

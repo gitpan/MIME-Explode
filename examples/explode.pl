@@ -1,7 +1,6 @@
 #!/usr/bin/perl -w -T
 
 use strict;
-use IO::File;
 use MIME::Explode;
 use Benchmark;
 
@@ -28,24 +27,25 @@ my $headers = $explode->parse(\*MAIL, \*OUTPUT);
 close(OUTPUT);
 close(MAIL);
 
+print "Number of messages: ", $explode->nmsgs, "\n";
 
-for my $msg (sort{ $a cmp $b } keys(%{$headers})) {
+for my $part (sort{ $a cmp $b } keys(%{$headers})) {
 	print "---------------------------\n";
-	for my $k (keys(%{$headers->{$msg}})) {
-		if(ref($headers->{$msg}->{$k}) eq "ARRAY") {
-			for my $i (0 .. $#{$headers->{$msg}->{$k}}) {
-				print "$msg => $k => $i => ", $headers->{$msg}->{$k}->[$i], "\n";
+	for my $k (keys(%{$headers->{$part}})) {
+		if(ref($headers->{$part}->{$k}) eq "ARRAY") {
+			for my $i (0 .. $#{$headers->{$part}->{$k}}) {
+				print "$part => $k => $i => ", $headers->{$part}->{$k}->[$i], "\n";
 			}
-		} elsif(ref($headers->{$msg}->{$k}) eq "HASH") {
-			for my $ks (keys(%{$headers->{$msg}->{$k}})) {
-				if(ref($headers->{$msg}->{$k}->{$ks}) eq "ARRAY") {
-					print "$msg => $k => $ks => ", join(($ks eq "charset") ? " " : "", @{$headers->{$msg}->{$k}->{$ks}}), "\n";
+		} elsif(ref($headers->{$part}->{$k}) eq "HASH") {
+			for my $ks (keys(%{$headers->{$part}->{$k}})) {
+				if(ref($headers->{$part}->{$k}->{$ks}) eq "ARRAY") {
+					print "$part => $k => $ks => ", join(($ks eq "charset") ? " " : "", @{$headers->{$part}->{$k}->{$ks}}), "\n";
 				} else {
-					print "$msg => $k => $ks => ", $headers->{$msg}->{$k}->{$ks}, "\n";
+					print "$part => $k => $ks => ", $headers->{$part}->{$k}->{$ks}, "\n";
 				}
 			}
 		} else {
-			print "$msg => $k => ", $headers->{$msg}->{$k}, "\n";
+			print "$part => $k => ", $headers->{$part}->{$k}, "\n";
 		}
 	}
 }
