@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Thu May  6 18:43:55 WEST 2004
+# Last Modification: Sat May 22 16:10:58 WEST 2004
 #
 # Copyright (c) 2004 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.31';
+$VERSION = '0.32';
 
 use constant BUFFSIZE => 64;
 
@@ -104,12 +104,12 @@ sub _parse {
 	my ($fh_mail, $fh_tmp) = @{$fhs};
 	my ($tree, $key, $tmpbuff, $boundary, $ftmp) = (join("\.", $base, "0"), "", "", "", "");
 	my ($check_ctype, $ctlength) = (1, 0);
-	my ($ph, $tmp, $exclude, $uucount, $checkhdr) = (0, 0, 0, 0, 0);
+	my ($ph, $tmp, $exclude, $attcount, $checkhdr) = (0, 0, 0, 0, 0);
 	my $fh;
 	while(local $_ = <$fh_mail>) {
 		defined($fh_tmp) and print $fh_tmp $_;
 		if($header) {
-			($ph, $uucount, $exclude, $tmpbuff, $check_ctype, $ctlength, $ftmp) = (1, 0, 0, "", 1, 0, "");
+			($ph, $attcount, $exclude, $tmpbuff, $check_ctype, $ctlength, $ftmp) = (1, 0, 0, "", 1, 0, "");
 			if(!$mbox && $base eq "0" && /$patterns[4]/o) { $mbox = 1; next; }
 			if(exists($_[0]->{$tree}->{$key})) {
 				s/\x0d//og;
@@ -127,9 +127,7 @@ sub _parse {
 					next;
 				}
 				if(exists($h_hash{$key}) && exists($_[0]->{$tree}->{$key}->{value})) {
-					my $params = semicolon_split($_[0]->{$tree}->{$key}->{value});
-					$_[0]->{$tree}->{$key}->{value} = shift(@{$params}) || "";
-					map { /$patterns[0]/o and $_[0]->{$tree}->{$key}->{lc($1)} = $2; } @{$params};
+					&header2hash($_[0]->{$tree}->{$key}, $_[0]->{$tree}->{$key}->{value});
 				} elsif($key eq "subject" && $args->{decode_subject}) {
 					my @parts = &decode_mimewords($_[0]->{$tree}->{subject});
 					delete($_[0]->{$tree}->{subject});
@@ -158,15 +156,13 @@ sub _parse {
 				if(exists($_[0]->{$tree}->{'content-type'}->{boundary}) && $_[0]->{$tree}->{'content-type'}->{value} =~ /multipart\/\w+/o) {
 					my $res = &_parse($fhs, $header, $mbox, $tree, $_[0]->{$tree}->{'content-type'}->{boundary}, $args, $files, $_[0]);
 					if($res->[1]) {
-						if($mbox) { $tmp = 1; }
-						else { return([$tree, $res->[1]]); }
+						$mbox ? ($tmp = 1) : return([$tree, $res->[1]]);
 						$_ = $res->[1];
 					} else { next; }
 				} elsif($_[0]->{$tree}->{'content-type'}->{value} eq "message/rfc822") {
 					my $res = &_parse($fhs, 1, $mbox, $tree, $origin, $args, $files, $_[0]);
 					if($res->[1]) { 
-						if($mbox) { $tmp = 1; }
-						else { return([$tree, $res->[1]]); }
+						$mbox ? ($tmp = 1) : return([$tree, $res->[1]]);
 						$_ = $res->[1];
 					} else { next; }
 				}
@@ -174,14 +170,14 @@ sub _parse {
 		}
 		$checkhdr = 0;
 		$key = "";
-		!defined($_) and next;
+		defined($_) or next;
 		if(/$patterns[3]/o) {
 			my $file = &check_filename($files, $2);
 			my $filepath = ($args->{output_dir}) ? join("/", $args->{output_dir}, $file) : $file;
 			my $res = uu_file($fhs, $filepath, $1 || "644", $args->{ctypes});
-			$_[0]->{"$tree.$uucount"}->{'content-type'}->{value} = $res->[0];
-			$_[0]->{"$tree.$uucount"}->{'content-disposition'}->{filepath} = $filepath unless($res->[1]);
-			$uucount++;
+			$_[0]->{"$tree.$attcount"}->{'content-type'}->{value} = $res->[0];
+			$_[0]->{"$tree.$attcount"}->{'content-disposition'}->{filepath} = $filepath unless($res->[1]);
+			$attcount++;
 			next;
 		}
 		my $breakmsg = "";
@@ -222,8 +218,7 @@ sub _parse {
 		if($mbox && /$patterns[4]/o) {
 			if(scalar(@{[split(/\./o, $tree)]}) > 2) {
 				$breakmsg = $_;
-				if($boundary) { $_ = "--$boundary--\r\n"; } 
-				else { return([$tree, $breakmsg]); }
+				$boundary ? ($_ = "--$boundary--\r\n") : return([$tree, $breakmsg]);
 			} else {
 				defined($fh) and &file_close($fh);
 				$header = 1;
@@ -233,7 +228,7 @@ sub _parse {
 			}
 		}
 		$tmp = ((length() <= 2) && /$patterns[2]/o) ? 1 : 0;
-		next if(!defined($fh) && $tmp);
+		(defined($fh) || !$tmp) or next;
 		if($boundary) {
 			if(index($_, "--$boundary--") >= 0) {
 				defined($fh) and &file_close($fh);
@@ -255,7 +250,7 @@ sub _parse {
 				next;
 			}
 		}
-		($exclude || !$ph) and next;
+		(!$exclude && $ph) or next;
 		if($check_ctype && $args->{check_ctype}) {
 			($tmpbuff .= $_) =~ s/^[\n\r\t]+//o;
 			if(length($tmpbuff) > BUFFSIZE) {
@@ -295,7 +290,7 @@ sub _parse {
 				$ftmp = "";
 			}
 			print $fh ($_[0]->{$tree}->{'content-transfer-encoding'}->{value} eq "quoted-printable") ? rfc822_qprint($_) : $_;
-			next unless(exists($_[0]->{$tree}->{'content-length'}));
+			exists($_[0]->{$tree}->{'content-length'}) or next;
 			if(($ctlength += length()) >= $_[0]->{$tree}->{'content-length'}) {
 				defined($fh) and &file_close($fh);
 				$exclude = 1;
@@ -320,6 +315,15 @@ sub file_open {
 	open(FILE, ">$path") or die("MIME::Explode: Couldn't open $path for writing: $!\n");
 	binmode(FILE);
 	return *FILE;
+}
+
+sub header2hash {
+	my $header = pop;
+
+	my $params = semicolon_split($header);
+	$_[0]->{value} = shift(@{$params}) || "";
+	map {/$patterns[0]/o and $_[0]->{lc($1)} = $2; } @{$params};
+	return();
 }
 
 sub set_filename {

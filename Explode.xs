@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Tue Jan 27 16:30:50 WET 2004
+ * Last Modification: Sat May 22 16:25:05 WEST 2004
  *
  * Copyright (c) 2004 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -123,6 +123,10 @@ static char *set_mime_type(unsigned char *buff, unsigned long len, char *base) {
 			buff[2] == 0xff && buff[3] == 0xe0 &&
 				strnEQ((char *)&buff[6], "JFIF", 4))
 			return("image/jpeg");
+		if(len > 15 && buff[0] == 0x42 && buff[1] == 0x4d &&
+				buff[5] == 0x00 && buff[10] == 0x36 &&
+					buff[15] == 0x28)
+			return("image/bmp");
 		return(base ? base : "");
 	}
 }

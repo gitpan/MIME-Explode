@@ -17,7 +17,7 @@ my $explode = MIME::Explode->new(
 	mkdir              => 0755,
 	decode_subject     => $decode_subject,
 	check_content_type => 1,
-	exclude_types      => ["image/gif", "image/jpeg"],
+	exclude_types      => ["image/gif", "image/jpeg", "image/bmp"],
 );
 
 open(MAIL, "<$mail") or die("Couldn't open $mail for reading: $!\n");

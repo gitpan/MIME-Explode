@@ -1,5 +1,9 @@
 Revision history for Perl extension MIME::Explode.
 
+0.32  Sat May 22 16:37:38 WEST 2004
+	- This release adds support to detect the mime type "image/bmp".
+	- Small code cleanup.
+
 0.31  Thu May  6 18:44:57 WEST 2004
 	- This version fixes a bug in header parser when it finds a line
 	  only with spaces. The parser don't treat it as the end of header
