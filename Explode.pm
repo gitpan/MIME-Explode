@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Thu Aug 29 12:22:07 WEST 2002
+# Last Modification: Thu Nov 14 14:54:20 WET 2002
 #
 # Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.09';
+$VERSION = '0.10';
 
 use constant BUFFSIZE => 64;
 
@@ -31,7 +31,7 @@ my %h_hash = (
 );
 
 my @patterns = (
-	'^([^=]+) ?=[ \"]*([^\"]+)',
+	'^([^= ]+) *=[ \"]*([^\"]+)',
 	'^(\w[\w\-]*): *([^\x0d\x0a\x09\f]*)[\x0d\x0a\x09\f]+',
 	'^[\x0a\x0d]+$',
 	'^begin\s*(\d\d\d)\s*(\S+)',
@@ -229,12 +229,24 @@ sub _parse {
 		}
 		if($boundary) {
 			if(index($_, "--$boundary--") >= 0) {
-				defined($fh) and &file_close($fh);
-				if($mbox) {
-					($tmp, $exclude) = (1, 1);
-					$boundary = "";
-					next;
-				} else { return($tree); }
+				my $find = 0;
+				if(defined($fh_tmp)) {
+					my $pos = tell($fh_tmp);
+					while(<$fh_mail>) {
+						/^[\n\r]+/o and next;
+						$_ = "--$boundary" and $find = 1 if(index($_, "--$boundary") >= 0);
+						last;
+					}
+					seek($fh_mail, $pos, 0);
+				}
+				unless($find) {
+					defined($fh) and &file_close($fh);
+					if($mbox) {
+						($tmp, $exclude) = (1, 1);
+						$boundary = "";
+						next;
+					} else { return($tree); }
+				}
 			}
 			if(index($_, "--$boundary") >= 0) {
 				defined($fh) and &file_close($fh);
