@@ -1,8 +1,9 @@
 /*
  * Explode.xs
- * Last Modification: Mon Dec 23 19:02:01 WET 2002
+ * Last Modification: Mon Feb 10 11:12:14 WET 2003
  *
- * Copyright (c) 2002 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
+ * Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights 
+reserved.
  * This module is free software; you can redistribute it and/or modify
  * it under the same terms as Perl itself.
  *

@@ -1,5 +1,8 @@
 Revision history for Perl extension MIME::Explode.
 
+0.16  Mon Feb 10 12:23:59 WET 2003
+	- fixed a "bug" in messages with "message/rfc822" content type
+
 0.15  Mon Dec 23 19:08:28 WET 2002
 	- a problem with uuencoded messages without "end" termination has
           been fixed.
