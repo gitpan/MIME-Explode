@@ -1,5 +1,8 @@
 Revision history for Perl extension MIME::Explode.
 
+0.25  Tue Aug  5 19:40:10 WEST 2003
+	- The problem with tabs in headers has been fixed
+
 0.24  Fri Jun 20 14:43:49 WEST 2003
 	- This version fixes a bug that caused failures when filename have 
 	  only spaces.
@@ -104,4 +107,3 @@ Revision history for Perl extension MIME::Explode.
 
 0.01  Sat Jul 20 17:40:18 WEST 2002
 	- original version; created by h2xs 1.19
-
