@@ -1,5 +1,8 @@
 Revision history for Perl extension MIME::Explode.
 
+0.18  Tue Feb 25 10:46:27 WET 2003
+	- now, the line with "unistd.h" is not included in win32
+
 0.17  Mon Feb 24 14:32:25 WET 2003
 	- a problem with "$_" perl global variable has been fixed with 
 	  local()

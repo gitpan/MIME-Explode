@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Mon Feb 24 14:27:55 WET 2003
+ * Last Modification: Tue Feb 25 10:44:48 WET 2003
  *
  * Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -8,7 +8,9 @@
  *
  */
 
+#ifndef WIN32
 #include <unistd.h>
+#endif
 
 #ifdef OP_PROTOTYPE
 #undef OP_PROTOTYPE
