@@ -25,10 +25,13 @@ testmsgs/multi-nested2.msg
 testmsgs/multi-nested3.msg
 testmsgs/multi-simple.msg
 testmsgs/multi-weirdspace.msg
+testmsgs/problem.mbx
 testmsgs/qprint-evil.msg
 testmsgs/re-fwd.msg
+testmsgs/rfc822.msg
 testmsgs/russian.msg
 testmsgs/simple.msg
 testmsgs/uu-junk-target.msg
 testmsgs/uu-junk.msg
 testmsgs/uu-zeegee.msg
+testmsgs/viraldoc.msg

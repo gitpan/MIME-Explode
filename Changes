@@ -1,5 +1,11 @@
 Revision history for Perl extension MIME::Explode.
 
+0.11  Mon Nov 18 11:49:13 WET 2002
+	- lots of minor bugs was fixed.
+	- the functions tell and seek has been removed because not work
+	  with STDIN filehandle.
+	- new test messages has been added to testmsg directory
+
 0.10  Thu Nov 14 15:17:53 WET 2002
 	- fixed a "bug" in messages with false boundary termination.
 	- the problem with spaces in header names was fixed.

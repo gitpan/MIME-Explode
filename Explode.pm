@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Thu Nov 14 14:54:20 WET 2002
+# Last Modification: Mon Nov 18 11:46:20 WET 2002
 #
 # Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.10';
+$VERSION = '0.11';
 
 use constant BUFFSIZE => 64;
 
@@ -82,8 +82,8 @@ sub parse {
 		mkdir($self->{output_dir}, $self->{mkdir}) or
 			die("MIME::Explode: Failed to create directory \"" . $self->{output_dir} . "\" $!");
 	}
-	my $last = &_parse(\@_, "0.0", "", $args, {}, $headers);
-	$self->{nmsgs} = ($last) ? (split(/\./, $last))[0] + 1 : 0;
+	my $last = &_parse(\@_, 1, "0", "", $args, {}, $headers);
+	$self->{nmsgs} = ($last->[0]) ? (split(/\./, $last->[0]))[0] + 1 : 0;
 	my ($fh_mail, $fh_tmp) = @_;
 	if(defined($fh_tmp)) { while(<$fh_mail>) { print $fh_tmp $_; } }
 	return($headers);
@@ -93,23 +93,23 @@ sub nmsgs { $_[0]->{'nmsgs'} }
 
 sub _parse {
 	my $fhs = shift;
-	my $base = shift || "0.0";
+	my $header = shift;
+	my $base = shift || "0";
 	my $origin = shift || "";
 	my $args = shift;
 	my $files = shift;
 
 	my ($fh_mail, $fh_tmp) = @{$fhs};
-	my ($tree, $key, $tmpbuff, $boundary, $ftmp) = ("", "", "", "", "");
-	my ($header, $check_ctype, $ctlength) = (1, 1, 0);
-	my ($tmp, $exclude, $uucount, $checkhdr, $mbox) = (0, 0, 0, 0, 0);
+	my ($tree, $key, $tmpbuff, $boundary, $ftmp) = (join("\.", $base, "0"), "", "", "", "");
+	my ($check_ctype, $ctlength) = (1, 0);
+	my ($ph, $tmp, $exclude, $uucount, $checkhdr, $mbox) = (0, 0, 0, 0, 0, 0);
 	my $fh;
-
 	while(<$fh_mail>) {
 		defined($fh_tmp) and print $fh_tmp $_;
 		if($header) {
-			($uucount, $exclude, $tmpbuff, $check_ctype, $ctlength, $ftmp) = (0, 0, "", 1, 0, "");
-			if(!$mbox && !$tree && /$patterns[4]/o) { $mbox = 1; next; }
-			if($tree && exists($_[0]->{$tree}->{$key})) {
+			($ph, $uucount, $exclude, $tmpbuff, $check_ctype, $ctlength, $ftmp) = (1, 0, 0, "", 1, 0, "");
+			if(!$mbox && $base eq "0" && /$patterns[4]/o) { $mbox = 1; next; }
+			if(exists($_[0]->{$tree}->{$key})) {
 				s/\x0d//og;
 				if(s/$patterns[5]/ /o) {
 					s/\s+$//o;
@@ -136,7 +136,6 @@ sub _parse {
 				defined($fh) and &file_close($fh);
 				($header, $checkhdr) = (1, 1);
 				$key = lc($1);
-				$tree ||= $base;
 				if($key eq "received" || $key eq "x-received") {
 					push(@{$_[0]->{$tree}->{$key}}, $2);
 					next;
@@ -148,30 +147,21 @@ sub _parse {
 			}
 			next if(!$checkhdr && (length() <= 2) && /$patterns[2]/o);
 			$header = 0;
-			if($tree) {
-				if(exists($_[0]->{$tree}->{'content-type'}) && exists($_[0]->{$tree}->{'content-type'}->{value})) {
-					$_[0]->{$tree}->{'content-type'}->{value} = lc($_[0]->{$tree}->{'content-type'}->{value});
-					if($_[0]->{$tree}->{'content-type'}->{value} =~ /multipart\/\w+/o) {
-						if(exists($_[0]->{$base}->{'content-type'}) && exists($_[0]->{$base}->{'content-type'}->{boundary}) &&
-								($_[0]->{$base}->{'content-type'}->{boundary} ne $_[0]->{$tree}->{'content-type'}->{boundary})) {
-							$_[0]->{"$tree.0"}->{'content-type'}->{boundary} = $_[0]->{$tree}->{'content-type'}->{boundary};
-							$_[0]->{"$tree.0"}->{'content-type'}->{value} = $_[0]->{$tree}->{'content-type'}->{value};
-							if(&_parse($fhs, "$tree.0", $_[0]->{$base}->{'content-type'}->{boundary}, $args, $files, $_[0]) eq "stop") {
-								$header = 1;
-								$boundary = "";
-								my @ps = split(/\./o, $tree);
-								$ps[$#ps]++;
-								$tree = join("\.", @ps);
-							}
-						}
-						next;
-					}
-					&_parse($fhs, "$tree.0", $_[0]->{$base}->{'content-type'}->{boundary}, $args, $files, $_[0])
-						if($_[0]->{$tree}->{'content-type'}->{value} eq "message/rfc822");
+			if(exists($_[0]->{$tree}->{'content-type'}) && exists($_[0]->{$tree}->{'content-type'}->{value})) {
+				$_[0]->{$tree}->{'content-type'}->{value} = lc($_[0]->{$tree}->{'content-type'}->{value});
+				if(exists($_[0]->{$tree}->{'content-type'}->{boundary}) && $_[0]->{$tree}->{'content-type'}->{value} =~ /multipart\/\w+/o) {
+					my $res = &_parse($fhs, $header, $tree, $_[0]->{$tree}->{'content-type'}->{boundary}, $args, $files, $_[0]);
+					if($res->[1]) {
+						return([$tree, $res->[1]]) unless($mbox);
+						$_ = $res->[1];
+					} else { next; }
+				} elsif($_[0]->{$tree}->{'content-type'}->{value} eq "message/rfc822") {
+					my $res = &_parse($fhs, 1, $tree, $origin, $args, $files, $_[0]);
+					if($res->[1]) { 
+						return([$tree, $res->[1]]) unless($mbox);
+						$_ = $res->[1];
+					} else { next; }
 				}
-			} else {
-				defined($fh) and &file_close($fh);
-				$tree = $base;
 			}
 		}
 		$checkhdr = 0;
@@ -186,10 +176,9 @@ sub _parse {
 			$uucount++;
 			next;
 		}
+		my $breakmsg = "";
 		unless(defined($fh)) {
-			unless($exclude) {
-				$boundary = (exists($_[0]->{$base}->{'content-type'}->{boundary})) ? $_[0]->{$base}->{'content-type'}->{boundary} : "";
-			}
+			$boundary = $origin;
 			if(exists($_[0]->{$tree}->{'content-type'}) && exists($_[0]->{$tree}->{'content-type'}->{value})) {
 				$exclude = 1 if(($_[0]->{$tree}->{'content-type'}->{value} =~ /^multipart\/\w+$/o) || ($_[0]->{$tree}->{'content-type'}->{value} eq "message/rfc822"));
 			} else { $check_ctype = 1; }
@@ -201,13 +190,17 @@ sub _parse {
 							($_[0]->{$tree}->{'content-transfer-encoding'}->{value} eq "quoted-printable" && $boundary)) {
 						&set_filename($files, $_[0]->{$tree});
 						my $filepath = ($args->{output_dir}) ? join("/", $args->{output_dir}, $_[0]->{$tree}->{'content-disposition'}->{filename}) : $_[0]->{$tree}->{'content-disposition'}->{filename};
-						my $res = &decode_content($fhs, $_[0]->{$tree}->{'content-transfer-encoding'}->{value}, $filepath, $args->{check_ctype}, $_[0]->{$tree}->{'content-type'}->{value}, "--$boundary", $args->{ctypes});
+						my $res = &decode_content($fhs, $_[0]->{$tree}->{'content-transfer-encoding'}->{value}, $filepath, $args->{check_ctype}, $_[0]->{$tree}->{'content-type'}->{value} || "", "--$boundary", $args->{ctypes});
 						$_[0]->{$tree}->{'content-type'}->{value} = $res->[1] if($res->[1]);
 						$_[0]->{$tree}->{'content-disposition'}->{filepath} = $filepath unless($res->[2]);
 						$tmp = 1;
 						unless($_ = $res->[0]) {
 							$exclude = 1;
 							next;
+						}
+						if(/$patterns[4]/o && scalar(@{[split(/\./o, $tree)]}) > 2) {
+							$breakmsg = $_;
+							$_ = "--$boundary--\r\n";
 						}
 					}
 				}
@@ -217,49 +210,33 @@ sub _parse {
 			defined($fh) and &file_close($fh);
 			$header = 1;
 			my @ps = split(/\./o, $tree);
-			$base = ($tree = join(".", ++$ps[0], "0"));
+			$tree = join(".", ++$ps[0], "0");
 			next;
 		}
 		$tmp = ((length() <= 2) && /$patterns[2]/o) ? 1 : 0;
 		next if(!defined($fh) && $tmp);
-
-		if($origin && !index($_, "--$origin")) {
-			defined($fh) and &file_close($fh);
-			return("stop");
-		}
 		if($boundary) {
 			if(index($_, "--$boundary--") >= 0) {
-				my $find = 0;
-				if(defined($fh_tmp)) {
-					my $pos = tell($fh_tmp);
-					while(<$fh_mail>) {
-						/^[\n\r]+/o and next;
-						$_ = "--$boundary" and $find = 1 if(index($_, "--$boundary") >= 0);
-						last;
-					}
-					seek($fh_mail, $pos, 0);
-				}
-				unless($find) {
-					defined($fh) and &file_close($fh);
-					if($mbox) {
-						($tmp, $exclude) = (1, 1);
-						$boundary = "";
-						next;
-					} else { return($tree); }
-				}
+				defined($fh) and &file_close($fh);
+				if($mbox) {
+					($tmp, $exclude) = (1, 1);
+					$boundary = "";
+					next;
+				} else { return([$tree, $breakmsg]); }
 			}
 			if(index($_, "--$boundary") >= 0) {
 				defined($fh) and &file_close($fh);
 				($tmp, $header) = (1, 1);
 				$boundary = "";
-				my @ps = split(/\./o, $tree);
-				$ps[$#ps]++;
-				$tree = join("\.", @ps);
+				if($ph) {
+					my @ps = split(/\./o, $tree);
+					$ps[$#ps]++;
+					$tree = join("\.", @ps);
+				}
 				next;
 			}
 		}
-		$exclude and next;
-
+		($exclude || !$ph) and next;
 		if($check_ctype && $args->{check_ctype}) {
 			($tmpbuff .= $_) =~ s/^[\n\r\t]+//o;
 			if(length($tmpbuff) > BUFFSIZE) {
@@ -307,7 +284,7 @@ sub _parse {
 		}
 	}
 	defined($fh) and &file_close($fh);
-	return($tree);
+	return([$tree, ""]);
 }
 
 sub file_close {
@@ -320,7 +297,7 @@ sub file_open {
 	local *FILE;
 	if($path =~ /^(.+)$/) { $path = $1; }
 	open(FILE, ">$path") or
-		die("MIME::Explode: Couldn't open file.tmp for writing: $!\n");
+		die("MIME::Explode: Couldn't open $path for writing: $!\n");
 	binmode(FILE);
 	return *FILE;
 }

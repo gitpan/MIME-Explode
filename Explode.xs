@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Tue Aug 20 10:59:07 WEST 2002
+ * Last Modification: Mon Nov 18 11:45:56 WET 2002
  *
  * Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -420,9 +420,15 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 
 		while(fgets(line, BUFFLEN, fpin)) {
 			int l = strlen(line);
-			if(line[l-1] != 0x0a) break;
 			if(fptmp != NULL) PerlIO_write(fptmp, line, l);
-			if(encoding[0] == 'b' && line[0] == 0x0a && len > 0) break;
+			if(encoding[0] == 'b') {
+				if(line[0] == 0x0a && len > 0) break;
+				if(line[l-1] != 0x0a) break;
+				if(strchr(line, ' ')) {
+					strcpy(part, line);
+					break;
+				}
+			}
 			if(rest = instr(line, boundary)) {
 				strcpy(part, rest);
 				l -= strlen(part);
@@ -436,7 +442,6 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 				PerlIO_write(fpout, decoded, len);
 			}
 			if(last) break;
-
 			if(verify) {
 				if((encoding[0] == 'b' && line[0] == 0x20) || line[0] == 0x0a || line[0] == 0x0d) continue;
 				data_cat(tmp, decoded, &tmplen, len);
