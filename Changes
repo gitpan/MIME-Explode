@@ -1,5 +1,9 @@
 Revision history for Perl extension MIME::Explode.
 
+0.02  Sat Jul 27 15:15:40 WEST 2002
+	- code cleanup
+	- now, "x-received" header is acceded via array reference
+
 0.01  Sat Jul 20 17:40:18 WEST 2002
 	- original version; created by h2xs 1.19
 

@@ -1,6 +1,6 @@
 #
 # Scan.pm
-# Last Modification: Sat Jul 20 17:36:42 WEST 2002
+# Last Modification: Sat Jul 27 15:12:29 WEST 2002
 #
 # Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -16,15 +16,12 @@ require DynaLoader;
 require AutoLoader;
 use SelfLoader;
 
-use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
+use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw();
+$VERSION = '0.02';
 
-$VERSION = '0.01';
-
-use constant FILEISTEXT => 20;
-use constant FILEISHTML => 4;
 use constant BUFFSIZE   => 64;
 
 my %h_hash = (
@@ -56,11 +53,11 @@ sub new {
 	my $proto = shift;
 	my $class = ref($proto) || $proto;
 	my $self  = {
-			output_dir         => "/tmp",
-			mkdir              => 0,
-			check_content_type => 0,
-			exclude_types      => [],
-			@_,
+		output_dir         => "/tmp",
+		mkdir              => 0,
+		check_content_type => 0,
+		exclude_types      => [],
+		@_,
 	};
 	bless ($self, $class);
 	return($self);
@@ -131,7 +128,7 @@ sub _parse {
 				($header, $checkhdr) = (1, 1);
 				$key = lc($1);
 				$tree ||= $base;
-				if($key eq "received") {
+				if($key eq "received" || $key eq "x-received") {
 					push(@{$_[0]->{$tree}->{$key}}, $2);
 					next;
 				}
@@ -154,9 +151,8 @@ sub _parse {
 						}
 						next;
 					}
-					if($_[0]->{$tree}->{'content-type'}->{value} eq "message/rfc822") {
-						&_parse($fhs, "$tree.0", $_[0]->{$base}->{'content-type'}->{boundary}, $args, $_[0]);
-					}
+					&_parse($fhs, "$tree.0", $_[0]->{$base}->{'content-type'}->{boundary}, $args, $_[0])
+						if($_[0]->{$tree}->{'content-type'}->{value} eq "message/rfc822");
 				}
 			} else {
 				defined($fh) and &file_close($fh);
