@@ -1,5 +1,14 @@
 Revision history for Perl extension MIME::Explode.
 
+0.35  Fri May 28 17:28:19 WEST 2004
+	- A "init" private method was added to create a directory if
+	  the keyword "output_dir" is given.
+	- The "clean_all" method were also added to clean the "output_dir"
+	  directory.
+	- The default value of keyword "mkdir" has been set to octal
+	  value "0755".
+	- A small bugfix has been applied to the "documentation" (pod).
+
 0.34  Tue May 25 20:02:30 WEST 2004
 	- This version fixes a bug in "uu" decode function.
 

@@ -10,10 +10,11 @@ my $mail = shift(@ARGV) || die("no args");
 die("Unable to open file \"$mail\"") unless(-e $mail);
 
 my $decode_subject = 1;
+my $tmp_dir = "tmp";
 
 my $output = "file.tmp";
 my $explode = MIME::Explode->new(
-	output_dir         => "tmp",
+	output_dir         => $tmp_dir,
 	mkdir              => 0755,
 	decode_subject     => $decode_subject,
 	check_content_type => 1,
@@ -56,4 +57,15 @@ my $diff = timediff($finish, $start);
 my $strtime = timestr($diff);
 print STDERR "\n\nTime: $strtime\n";
 
+print "\n";
+                                                                                
+print "Clean the directory \"$tmp_dir\"? [y/n]:";
+my $clean = <>;
+chomp $clean;
+
+if($clean eq "y") {
+	if(my $e = $explode->clean_all()) {
+		print "Error: $e\n";
+	}
+}
 exit(0);

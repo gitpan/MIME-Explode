@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Tue May 25 20:01:31 WEST 2004
+# Last Modification: Fri May 28 17:13:06 WEST 2004
 #
 # Copyright (c) 2004 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.34';
+$VERSION = '0.35';
 
 use constant BUFFSIZE => 64;
 
@@ -54,15 +54,41 @@ sub new {
 	my $class = ref($proto) || $proto;
 	my $self  = {
 		output_dir         => "/tmp",
-		mkdir              => 0,
+		mkdir              => 0755,
 		decode_subject     => 0,
 		check_content_type => 0,
 		content_types      => [],
 		types_action       => "include",
 		@_,
 	};
-	bless ($self, $class);
+	bless($self, $class);
+	$self->init();
 	return($self);
+}
+
+sub init {
+	my $self = shift;
+	return() if((-d $self->{'output_dir'}) || !$self->{'mkdir'});
+	mkdir($self->{'output_dir'}, $self->{'mkdir'}) or
+		die(join("", "MIME::Explode: Failed to create directory \"", $self->{'output_dir'}, "\": $!"));
+	return();
+}
+
+sub clean_all {
+	my $self = shift;
+
+	my $dir = $self->{'output_dir'};
+	opendir(DIRECTORY, $dir) or return("Can't opendir \"$dir\": $!\n");
+	while(defined(my $file = readdir(DIRECTORY))) {
+		next if($file =~ /^\.\.?$/);
+		my $path = "$dir/$file";
+		if(my ($f) = ($path =~ /^(.+)$/)) {
+			unlink($f) or return("Couldn't unlink \"$f\" file: $!");
+		}
+	}
+	closedir(DIRECTORY);
+	rmdir($dir) or return("Couldn't rmdir \"$dir\" directory: $!");
+	return();
 }
 
 sub parse {
@@ -82,10 +108,6 @@ sub parse {
 		my %ctypes = ();
 		@ctypes{@{$self->{'content_types'}}} = (0 .. $#{$self->{'content_types'}});
 		$args{'ctypes'} = \%ctypes;
-	}
-	if(!(-d $self->{'output_dir'}) && $self->{'mkdir'}) {
-		mkdir($self->{'output_dir'}, $self->{'mkdir'}) or
-			die(join("", "MIME::Explode: Failed to create directory \"", $self->{output_dir}, "\" $!"));
 	}
 	my $last = &_parse(\@_, 1, 0, "0", "", \%args, {}, \%headers);
 	$self->{nmsgs} = ($last->[0]) ? (split(/\./, $last->[0]))[0] + 1 : 0;
@@ -480,6 +502,10 @@ MIME::Explode - Perl extension for explode MIME messages
     }
   }
 
+  if(my $e = $explode->clean_all()) {
+    print "Error: $e\n";
+  }
+
 =head1 DESCRIPTION
 
 MIME::Explode is perl module for parsing and decoding single or multipart
@@ -494,7 +520,7 @@ out of a MIME encoded email messages or mailboxes.
 This method create a new MIME::Explode object. The following keys are
 available:
 
-=over 5
+=over 7
 
 =item output_dir
 
@@ -536,6 +562,7 @@ files are removed if action is a "exclude". The default action is
 
 =back
 
+
 =head2 parse(FILEHANDLE, FILEHANDLE)
 
 This method parse the stream and splits it into its component entities.
@@ -543,9 +570,16 @@ This method return a hash reference with all parts. The FILEHANDLE should
 be a reference to a GLOB. The second argument is optional.
 
 
-=head2 nmsgs()
+=head2 nmsgs
 
 Returns the number of parsed messages.
+
+
+=head2 clean_all
+
+Cleans all files from the "output_dir" directory and then removes the
+directory. If an error happens returns it.
+
 
 =head1 AUTHOR
 
