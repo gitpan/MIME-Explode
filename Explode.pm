@@ -1,6 +1,6 @@
 #
-# Scan.pm
-# Last Modification: Tue Aug 27 12:47:47 WEST 200
+# Explode.pm
+# Last Modification: Thu Aug 29 12:22:07 WEST 2002
 #
 # Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.08';
+$VERSION = '0.09';
 
 use constant BUFFSIZE => 64;
 

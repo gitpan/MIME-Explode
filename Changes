@@ -1,7 +1,11 @@
 Revision history for Perl extension MIME::Explode.
 
+0.09  Thu Aug 29 17:33:18 WEST 2002
+	- corrected obvious text error in README and Explode.pm files
+	  Thanks to Helena Gomes <hpgomes@mail.pt>
+
 0.08  Tue Aug 27 12:49:29 WEST 2002
-	- fixed another bug with number of parsed messages
+	- fixed another "bug" with number of parsed messages
 
 0.07  Sat Aug 24 17:12:02 WEST 2002
 	- fixed the problem with number of parsed messages in "nmsg"

@@ -1,4 +1,4 @@
-This is the README file for the PERL module MIME::Explode for Version 0.08
+This is the README file for the PERL module MIME::Explode for Version 0.09
 
 MIME::Explode - Perl extension for explode MIME messages
 
@@ -7,7 +7,7 @@ MIME messages, and outputting its decoded components to a given directory
 ie, this module is designed to allows users to extract the attached files
 out of a MIME encoded email messages or mailboxes.
 
-To install File::Scan:
+To install MIME::Explode module type the following:
 
 % perl Makefile.PL
 % make
@@ -18,7 +18,7 @@ You can access the MIME::Explode documentation with perldoc MIME::Explode
 For examples look at examples directory.
 
 Questions, bug reports, useful code bits, and suggestions for
-MIME::Explode hould just be sent to to me at hdias@esb.ucp.pt
+MIME::Explode hould just be sent to me at hdias@esb.ucp.pt
 
 Copyright (c) 2002 Henrique Dias. All rights reserved.
 This program is free software; you can redistribute it and/or
