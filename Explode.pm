@@ -1,6 +1,6 @@
 #
 # Scan.pm
-# Last Modification: Sat Aug 24 16:58:11 WEST 2002
+# Last Modification: Tue Aug 27 12:47:47 WEST 200
 #
 # Copyright (c) 2002 Henrique Dias <hdias@esb.ucp.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.07';
+$VERSION = '0.08';
 
 use constant BUFFSIZE => 64;
 
@@ -231,14 +231,14 @@ sub _parse {
 			if(index($_, "--$boundary--") >= 0) {
 				defined($fh) and &file_close($fh);
 				if($mbox) {
-					$exclude = 1;
+					($tmp, $exclude) = (1, 1);
 					$boundary = "";
 					next;
 				} else { return($tree); }
 			}
 			if(index($_, "--$boundary") >= 0) {
 				defined($fh) and &file_close($fh);
-				$header = 1;
+				($tmp, $header) = (1, 1);
 				$boundary = "";
 				my @ps = split(/\./o, $tree);
 				$ps[$#ps]++;

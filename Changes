@@ -1,5 +1,8 @@
 Revision history for Perl extension MIME::Explode.
 
+0.08  Tue Aug 27 12:49:29 WEST 2002
+	- fixed another bug with number of parsed messages
+
 0.07  Sat Aug 24 17:12:02 WEST 2002
 	- fixed the problem with number of parsed messages in "nmsg"
 	  method
