@@ -1,5 +1,10 @@
 Revision history for Perl extension MIME::Explode.
 
+0.31  Thu May  6 18:44:57 WEST 2004
+	- This version fixes a bug in header parser when it finds a line
+	  only with spaces. The parser don't treat it as the end of header
+	  any more.
+
 0.30  Mon May  3 15:07:22 WEST 2004
 	- The problem with points in headers has been fixed.
 
