@@ -1,4 +1,4 @@
-This is the README file for the PERL module MIME::Explode for Version 0.28
+This is the README file for the PERL module MIME::Explode for Version 0.29
 
 MIME::Explode - Perl extension for explode MIME messages
 
@@ -20,6 +20,6 @@ For examples look at examples directory.
 Questions, bug reports, useful code bits, and suggestions for
 MIME::Explode hould just be sent to me at hdias@aesbuc.pt
 
-Copyright (c) 2003 Henrique Dias. All rights reserved.
+Copyright (c) 2004 Henrique Dias. All rights reserved.
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

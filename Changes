@@ -1,12 +1,15 @@
 Revision history for Perl extension MIME::Explode.
 
+0.29  Tue Jan 27 16:47:42 WET 2004
+	- Now in multipart messages, incomplete headers are discarded.
+
 0.28  Tue Nov  4 17:10:28 WET 2003
 	- This version fixes another "bug" in base64 decoding function 
 	  when the encoded lines have spaces in end.
 
 0.27  Tue Sep  9 14:27:24 WEST 2003
 	- The problem in file attachments names without quotations
-	  marks has been fexed.
+	  marks has been fixed.
 
 0.26  Fri Sep  5 15:54:23 WEST 2003
 	- This version fixes a bug in file attachments with semicolons in

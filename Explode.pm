@@ -1,8 +1,8 @@
 #
 # Explode.pm
-# Last Modification: Tue Nov  4 15:48:52 WET 2003
+# Last Modification: Tue Jan 27 16:42:04 WET 2004
 #
-# Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
+# Copyright (c) 2004 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
 # it under the same terms as Perl itself.
 #
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.28';
+$VERSION = '0.29';
 
 use constant BUFFSIZE => 64;
 
@@ -37,6 +37,7 @@ my @patterns = (
 	'^begin\s*(\d\d\d)\s*(\S+)',
 	'^From +[^ ]+ +[a-zA-Z]{3} [a-zA-Z]{3} [ \d]\d \d\d:\d\d:\d\d \d{4}( [\+\-]\d\d\d\d)?[\x0a\x0d]+',
 	'^[\x20\x09]+(?=.*\w+)',
+	'^[\x20\x09]+\w+\=[^\=]+'
 );
 
 my %content_type = (
@@ -135,7 +136,8 @@ sub _parse {
 					$_[0]->{$tree}->{subject}->{value} = [map {$_->[0] || ""} @parts];
 					$_[0]->{$tree}->{subject}->{charset} = [map {$_->[1] || "us-ascii"} @parts];
 				}
-			}
+			} elsif(/$patterns[6]/o) { next; }
+
 			if(/$patterns[1]/o) {
 				defined($fh) and &file_close($fh);
 				($header, $checkhdr) = (1, 1);
