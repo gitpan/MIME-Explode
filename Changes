@@ -1,5 +1,9 @@
 Revision history for Perl extension MIME::Explode.
 
+0.27  Tue Sep  9 14:27:24 WEST 2003
+	- The problem in file attachments names without quotations
+	  marks has been fexed.
+
 0.26  Fri Sep  5 15:54:23 WEST 2003
 	- This version fixes a bug in file attachments with semicolons in
 	  their names.

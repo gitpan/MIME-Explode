@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Fri Sep  5 15:54:09 WEST 2003
+# Last Modification: Tue Sep  9 14:05:12 WEST 2003
 #
 # Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.26';
+$VERSION = '0.27';
 
 use constant BUFFSIZE => 64;
 
@@ -37,7 +37,6 @@ my @patterns = (
 	'^begin\s*(\d\d\d)\s*(\S+)',
 	'^From +[^ ]+ +[a-zA-Z]{3} [a-zA-Z]{3} [ \d]\d \d\d:\d\d:\d\d \d{4}( [\+\-]\d\d\d\d)?[\x0a\x0d]+',
 	'^[\x20\x09]+(?=.*\w+)',
-	'[\x20\x09]*;[\x20\x09]*(?=[^\"]+\=[\x20\x09]*\")'
 );
 
 my %content_type = (
@@ -127,9 +126,9 @@ sub _parse {
 					next;
 				}
 				if(exists($h_hash{$key}) && exists($_[0]->{$tree}->{$key}->{value})) {
-					my @params = split(/$patterns[6]/o, $_[0]->{$tree}->{$key}->{value});
-					$_[0]->{$tree}->{$key}->{value} = shift(@params) || "";
-					map { /$patterns[0]/o and $_[0]->{$tree}->{$key}->{lc($1)} = $2; } @params;
+					my $params = semicolon_split($_[0]->{$tree}->{$key}->{value});
+					$_[0]->{$tree}->{$key}->{value} = shift(@{$params}) || "";
+					map { /$patterns[0]/o and $_[0]->{$tree}->{$key}->{lc($1)} = $2; } @{$params};
 				} elsif($key eq "subject" && $args->{decode_subject}) {
 					my @parts = &decode_mimewords($_[0]->{$tree}->{subject});
 					delete($_[0]->{$tree}->{subject});
@@ -346,6 +345,25 @@ bootstrap MIME::Explode $VERSION;
 1;
 
 __DATA__
+
+sub semicolon_split { 
+	my $str = shift || return([]);
+
+	my @array = ();
+	my $i = 0;
+	for(split(/;/, $str)) {
+		if(/\=/ or $i == 0) {
+			s/^[\t ]+//;
+			s/[\t ]+$//;
+			$array[$i] = $_;
+			$i++;
+		} else {
+			s/(?<=\")[\t ]+$//;
+			$array[$i-1] .= "\;$_";
+		}
+	}
+	return(\@array);  
+}
 
 sub check_filename {
 	my $files = shift;
