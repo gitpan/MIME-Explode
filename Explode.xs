@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Fri Dec 13 15:27:17 WET 2002
+ * Last Modification: Mon Dec 23 19:02:01 WET 2002
  *
  * Copyright (c) 2002 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -278,7 +278,6 @@ void *uu_decode(char *buff, unsigned long srcl, unsigned long *len) {
 	d = (char *)ret;
 	memset(ret,0,(size_t)*len);
 	*len = 0;
-
 	if(n <= 0) return("");
 	for(++p; n > 0; p += 4, n -= 3) {
 		if(n >= 3) {
@@ -389,9 +388,9 @@ exp_uu_file(fhs, filename, mode, ...)
 		while(sv_gets(buff_sv, fpin, 0)) {
 			STRLEN l = SvCUR(buff_sv);
 			char *line = SvGROW(buff_sv, l);
-			if(line[l-1] != '\n') break;
+			if(line[l-1] != 0x0a) break;
 			if(fptmp != NULL) PerlIO_write(fptmp, line, l);
-			if(instr(line, "end\n")) break;
+			if(instr(line, "end\n") || line[0] == 0x0a) break;
 			if(!exclude) {
 				decoded = uu_decode(line, l, &len);
 				PerlIO_write(fpout, decoded, len);
