@@ -1,5 +1,11 @@
 Revision history for Perl extension MIME::Explode.
 
+0.36  Thu Jul 29 14:11:04 WEST 2004
+	- Updated the XS _rfc822_base64 function.
+	- A bug in XS exp_decode_content function was fixed (spaces and
+	  new lines in base64 encoding lines dont stop more the decoding
+	  process).
+
 0.35  Fri May 28 17:28:19 WEST 2004
 	- A "init" private method was added to create a directory if
 	  the keyword "output_dir" is given.

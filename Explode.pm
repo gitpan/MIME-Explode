@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Fri May 28 17:13:06 WEST 2004
+# Last Modification: Thu Jul 29 14:07:24 WEST 2004
 #
 # Copyright (c) 2004 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.35';
+$VERSION = '0.36';
 
 use constant BUFFSIZE => 64;
 
@@ -233,7 +233,8 @@ sub _parse {
 									mimetype  => $_[0]->{$tree}->{'content-type'}->{value} || "",
 									checktype => $args->{'check_ctype'},
 									action    => $args->{'types_action'},
-									mimetypes => $args->{'ctypes'}
+									mimetypes => $args->{'ctypes'},
+									mailbox   => $mbox
 								});
 						$_[0]->{$tree}->{'content-type'}->{value} = $res->[1] if($res->[1]);
 						$_[0]->{$tree}->{'content-disposition'}->{filepath} = $filepath unless($res->[2]);

@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Tue May 25 20:02:18 WEST 2004
+ * Last Modification: Thu Jul 29 14:03:51 WEST 2004
  *
  * Copyright (c) 2004 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -27,6 +27,7 @@
 #define ISTEXT 70
 #define MBXHDRLEN 39
 
+#define WSP 0176
 #define JNK 0177
 #define PAD 0100
 
@@ -35,6 +36,8 @@
 #ifndef isGRAPH  
 #define isGRAPH(c) (isgraph(c))
 #endif
+
+typedef enum answers {NO = 0, MAYBE = 1, YES = 2} answers;
 
 bool ismailbox(unsigned char *line) {
 	int i = 5, p = 0;
@@ -196,7 +199,11 @@ unsigned char *_rfc822_qprint(unsigned char *src,
 	return ret;
 }
 
-
+/*
+ * From imap-2004a/src/c-client/rfc822.c
+ * Author: Mark Crispin
+ * Copyright 1988-2004 University of Washington.
+ */
 void *_rfc822_base64(unsigned char *src, unsigned long srcl,
 						unsigned long *len) {
 	char c;
@@ -204,9 +211,9 @@ void *_rfc822_base64(unsigned char *src, unsigned long srcl,
 	int e;
 	void *ret;
 	static unsigned char decode[256] = {
+		WSP,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,WSP,WSP,JNK,WSP,WSP,JNK,JNK,
 		JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,
-		JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,
-		JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,076,JNK,JNK,JNK,077,
+		WSP,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,076,JNK,JNK,JNK,077,
 		064,065,066,067,070,071,072,073,074,075,JNK,JNK,JNK,PAD,JNK,JNK,
 		JNK,000,001,002,003,004,005,006,007,010,011,012,013,014,015,016,
 		017,020,021,022,023,024,025,026,027,030,031,JNK,JNK,JNK,JNK,JNK,
@@ -219,53 +226,59 @@ void *_rfc822_base64(unsigned char *src, unsigned long srcl,
 		JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,
 		JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,
 		JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,
-		JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK 
+		JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK,JNK
 	};
-
 	New(0, ret, (size_t) (*len = 4 + ((srcl * 3) / 4)), void);
 	d = (char *)ret;
-
 	memset(ret,0,(size_t)*len);
 	*len = 0;
 	for(e = 0; srcl--; )
 		switch(c = decode[*src++]) {
-		default:
-			switch (e++) {
-				case 0:
-					*d = c << 2;
-					break;
-				case 1:
-					*d++ |= c >> 4;
-					*d = c << 4;
-					break;
-				case 2:
-					*d++ |= c >> 2;
-					*d = c << 6;
-					break;
-				case 3:
-					*d++ |= c;
-					e = 0;
-					break;
-			}
-			break;
-		case JNK:
-			break;
-		case PAD:
-			switch (e++) {
-				case 3:
-					for(; srcl; --srcl)
-						if(!(decode[*src++] & 0300)) {
-							warn("Possible data truncation in _rfc822_base64(): %.80s", (char *)src-1);
-						}
-					break;
-				case 2:
-					if(srcl && (*src == '=')) break;
-				default:
-					Safefree(ret);
-					return NULL;
-			}
-			break;
-	}
+			default:
+				switch (e++) {
+					case 0:
+						*d = c << 2;
+						break;
+					case 1:
+						*d++ |= c >> 4;
+						*d = c << 4;
+						break;
+					case 2:
+						*d++ |= c >> 2;
+						*d = c << 6;
+						break;
+					case 3:
+						*d++ |= c;
+						e = 0;
+						break;
+				}
+				break;
+			case WSP:
+				break;
+			case PAD:
+				switch (e++) {
+					case 3:
+						for(; srcl; --srcl)
+							switch (decode[*src++]) {
+								case WSP: case JNK: case PAD:
+									break;
+								default:
+									warn("Possible data truncation in _rfc822_base64(): %.80s", (char *)src-1);
+									srcl = 1;
+									break;
+							}
+							break;
+					case 2:
+						if(srcl && (*src == '=')) break;
+					default:
+						Safefree(ret);
+						return NULL;
+				}
+				break;
+			case JNK:
+				Safefree(ret);
+				return NULL;
+		}
 	*len = d - (char *) ret;
 	return ret;
 }
@@ -375,12 +388,11 @@ exp_uu_file(fhs, filename, mode, ...)
 		unsigned char *decoded = NULL;
 		bool verify = TRUE;
 		bool exclude = FALSE;
+		bool action = TRUE;
 		char mimetype[BUFFLEN] = "";
 		AV *av_ret = newAV();
 		char tmp[TMPBUFFLEN];
 		unsigned long tmplen = 0;
-		I32 action = 1;
-		I32 checktype = 0;
 	PPCODE:
 		if((avlen = av_len(av_fhs)) != -1) {
 			fpin = IoIFP(sv_2io(*av_fetch(av_fhs, 0, 0)));
@@ -393,7 +405,7 @@ exp_uu_file(fhs, filename, mode, ...)
 			HV *hv = (HV*)SvRV(ST(3));
 			if(hv_exists(hv, "action", 6)) {
 				SV **value = hv_fetch(hv, "action", 6, 0);
-				action = SvIVx(*value);
+				action = SvIVx(*value) ? TRUE : FALSE;
 			}
 			if(hv_exists(hv, "mimetypes", 9)) {
 				SV **value = hv_fetch(hv, "mimetypes", 9, 0);
@@ -411,7 +423,7 @@ exp_uu_file(fhs, filename, mode, ...)
 			if(instr(line, "end\n") || line[0] == 0x0a) break;
 			if(!exclude) {
 				decoded = uu_decode(line, l, &len);
-				PerlIO_write(fpout, decoded, len);
+				if(len) PerlIO_write(fpout, decoded, len);
 			}
 			if(verify) {
 				if(line[0] == 0x20 || line[0] == 0x0a || line[0] == 0x0d) continue;
@@ -453,9 +465,11 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 		SV *buff_sv = newSV(BUFFLEN);
 		SV *part = NULL;
 		char mt[BUFFLEN] = "";
-		bool last = FALSE;
 		bool exclude = FALSE;
 		bool verify = TRUE;
+		bool checktype = FALSE;
+		bool action = TRUE;
+		bool last = FALSE;
 		I32 avlen = 0;
 		HV *hvtypes;
 		AV *av_ret = newAV();
@@ -463,8 +477,8 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 		unsigned long len = 0;
 		char tmp[TMPBUFFLEN];
 		unsigned long tmplen = 0;
-		I32 action = 1;
-		I32 checktype = 0;
+		answers findmbox = NO;
+		answers endbase64 = NO;
 		char *mimetype;
 	PPCODE:
 		if((avlen = av_len(av_fhs)) != -1) {
@@ -481,15 +495,19 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 			}
 			if(hv_exists(hv, "checktype", 9)) {
 				SV **value = hv_fetch(hv, "checktype", 9, 0);
-				checktype = SvIVx(*value);
+				if(SvIVx(*value)) checktype = TRUE;
 			}
 			if(hv_exists(hv, "action", 6)) {
 				SV **value = hv_fetch(hv, "action", 6, 0);
-				action = SvIVx(*value);
+				action = SvIVx(*value) ? TRUE : FALSE;
 			}
 			if(hv_exists(hv, "mimetypes", 9)) {
 				SV **value = hv_fetch(hv, "mimetypes", 9, 0);
 				hvtypes = (HV*)SvRV(*value);
+			}
+			if(hv_exists(hv, "mailbox", 7)) {
+				SV **value = hv_fetch(hv, "mailbox", 7, 0);
+				if(SvIVx(*value)) findmbox = MAYBE;
 			}
 		}
 		if((fpout = PerlIO_open(filename, "wb")) == NULL)
@@ -498,22 +516,20 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 			STRLEN l = SvCUR(buff_sv);
 			char *line = SvGROW(buff_sv, l);
 			if(fptmp != NULL) PerlIO_write(fptmp, line, l);
-			if(encoding[0] == 'q' && ismailbox(line)) {
-				part = newSVpvn(line, l);
-				break;
+			if(findmbox == YES) {
+				if(ismailbox(line)) {
+					part = newSVpvn(line, l);
+					break;
+				}
+				findmbox = MAYBE;
+			}
+			if(line[0] == 0x0a && findmbox == MAYBE) {
+				findmbox = YES;
+				if(encoding[0] == 'b') continue;
 			}
 			if(encoding[0] == 'b') {
-				char *pos = NULL;
-				if(line[0] == 0x0a && len > 0) break;
 				if(boundary[0] != '\0' && line[l-1] != 0x0a) break;
-				if(pos = strchr(line, 0x20)) {
-					pos++;
-					while(*pos == 0x20) pos++;
-					if(*pos != 0x0a) {
-						part = newSVpvn(line, l);
-						break;
-					}
-				}
+				if(line[l-2] == '=' && line[l-1] == 0x0a) endbase64 = MAYBE;
 			}
 			if(boundary[0] != '\0' && (rest = instr(line, boundary))) {
 				part = newSVpvn(rest, strlen(rest));
@@ -521,13 +537,17 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 				if(l == 0) break;
 				line[l] = '\0';
 				last = TRUE;
+			} else if(endbase64 == YES && line[0] != 0x0a) {
+				part = newSVpvn(line, l);
+				break;
 			}
 			if(!exclude) {
 				decoded = (encoding[0] == 'q') ?
 					_rfc822_qprint(line, l, &len) : _rfc822_base64(line, l, &len);
-				PerlIO_write(fpout, decoded, len);
+				if(len) PerlIO_write(fpout, decoded, len);
 			}
 			if(last) break;
+			if(endbase64 == MAYBE) endbase64 = YES;
 			if(verify) {
 				if((encoding[0] == 'b' && line[0] == 0x20) || line[0] == 0x0a || line[0] == 0x0d) continue;
 				data_cat(tmp, decoded, &tmplen, len);
