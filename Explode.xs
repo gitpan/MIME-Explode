@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Sat May 22 16:25:05 WEST 2004
+ * Last Modification: Mon May 24 17:12:39 WEST 2004
  *
  * Copyright (c) 2004 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -362,7 +362,7 @@ void
 exp_uu_file(fhs, filename, mode, ...)
 		SV	*fhs;
 		char	*filename;
-		char	*mode
+		char	*mode;
 	PREINIT:
 		PerlIO *fpin = NULL;
 		PerlIO *fptmp = NULL;
@@ -379,6 +379,8 @@ exp_uu_file(fhs, filename, mode, ...)
 		AV *av_ret = newAV();
 		char tmp[TMPBUFFLEN];
 		unsigned long tmplen = 0;
+		I32 action = 1;
+		I32 checktype = 0;
 	PPCODE:
 		if((avlen = av_len(av_fhs)) != -1) {
 			fpin = IoIFP(sv_2io(*av_fetch(av_fhs, 0, 0)));
@@ -387,8 +389,17 @@ exp_uu_file(fhs, filename, mode, ...)
 		} else
 			croak("Null Array Reference");
 
-		if(items == 4)
-			hvtypes = (HV*)SvRV(ST(3));
+		if(items == 5) {
+			HV *hv = (HV*)SvRV(ST(4));
+			if(hv_exists(hv, "action", 6)) {
+				SV **value = hv_fetch(hv, "action", 6, 0);
+				action = SvIVx(*value);
+			}
+			if(hv_exists(hv, "mimetypes", 9)) {
+				SV **value = hv_fetch(hv, "mimetypes", 9, 0);
+				hvtypes = (HV*)SvRV(*value);
+			}
+		}
 		if((fpout = PerlIO_open(filename, "wb")) == NULL)
 			croak("Failed to open file \"%s\"", filename);
 
@@ -407,16 +418,16 @@ exp_uu_file(fhs, filename, mode, ...)
 				data_cat(tmp, decoded, &tmplen, len);
 				if(tmplen < TMPBUFFLEN) continue;
 				strcpy(mimetype, set_mime_type(tmp, tmplen, mimetype));
-				if(hv_exists(hvtypes, mimetype, strlen(mimetype)))
-					exclude = TRUE;
+				exclude = hv_exists(hvtypes, mimetype, strlen(mimetype)) ? (action ? FALSE : TRUE) :
+					hv_iterinit(hvtypes) ? (action ? TRUE : FALSE) : (action ? FALSE : TRUE);
 				verify = FALSE;
 			}
 		}
 		PerlIO_close(fpout);
 		if(verify) {
 			strcpy(mimetype, set_mime_type(tmp, tmplen, mimetype));
-			if(hv_exists(hvtypes, mimetype, strlen(mimetype)))
-				exclude = TRUE;
+			exclude = hv_exists(hvtypes, mimetype, strlen(mimetype)) ? (action ? FALSE : TRUE) :
+				hv_iterinit(hvtypes) ? (action ? TRUE : FALSE) : (action ? FALSE : TRUE);
 		}
 		if(exclude)
 			if(unlink(filename))
@@ -428,12 +439,10 @@ exp_uu_file(fhs, filename, mode, ...)
 
 
 void
-exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, boundary="", ...)
+exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 		SV	*fhs;
 		char 	*encoding;
 		char	*filename;
-		int	checktype;
-		char	*mimetype;
 		char 	*boundary;
 	PREINIT:
 		PerlIO *fpin = NULL;
@@ -454,6 +463,9 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 		unsigned long len = 0;
 		char tmp[TMPBUFFLEN];
 		unsigned long tmplen = 0;
+		I32 action = 1;
+		I32 checktype = 0;
+		char *mimetype;
 	PPCODE:
 		if((avlen = av_len(av_fhs)) != -1) {
 			fpin = IoIFP(sv_2io(*av_fetch(av_fhs, 0, 0)));
@@ -461,8 +473,25 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 				fptmp = IoIFP(sv_2io(*av_fetch(av_fhs, 1, 0)));
 		} else
 			croak("Null Array Reference");
-		if(items == 7)
-			hvtypes = (HV*)SvRV(ST(6));
+		if(items == 5) {
+			HV *hv = (HV*)SvRV(ST(4));
+			if(hv_exists(hv, "mimetype", 8)) {
+				SV **value = hv_fetch(hv, "mimetype", 8, 0);
+				mimetype = SvPVx(*value, na);
+			}
+			if(hv_exists(hv, "checktype", 9)) {
+				SV **value = hv_fetch(hv, "checktype", 9, 0);
+				checktype = SvIVx(*value);
+			}
+			if(hv_exists(hv, "action", 6)) {
+				SV **value = hv_fetch(hv, "action", 6, 0);
+				action = SvIVx(*value);
+			}
+			if(hv_exists(hv, "mimetypes", 9)) {
+				SV **value = hv_fetch(hv, "mimetypes", 9, 0);
+				hvtypes = (HV*)SvRV(*value);
+			}
+		}
 		if((fpout = PerlIO_open(filename, "wb")) == NULL)
 			croak("Failed to open file \"%s\"", filename);
 		while(sv_gets(buff_sv, fpin, 0)) {
@@ -504,15 +533,16 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 				data_cat(tmp, decoded, &tmplen, len);
 				if(tmplen < TMPBUFFLEN) continue;
 				strcpy(mt, (checktype) ? set_mime_type(tmp, tmplen, mimetype) : mimetype);
-				if(hv_exists(hvtypes, mt, strlen(mt)))
-					exclude = TRUE;
+				exclude = hv_exists(hvtypes, mt, strlen(mt)) ? (action ? FALSE : TRUE) :
+					hv_iterinit(hvtypes) ? (action ? TRUE : FALSE) : (action ? FALSE : TRUE);
 				verify = FALSE;
 			}
 		}
 		PerlIO_close(fpout);
 		if(verify) {
 			strcpy(mt, (checktype) ? set_mime_type(tmp, tmplen, mimetype) : mimetype);
-			if(hv_exists(hvtypes, mt, strlen(mt))) exclude = TRUE;
+			exclude = hv_exists(hvtypes, mt, strlen(mt)) ? (action ? FALSE : TRUE) :
+				hv_iterinit(hvtypes) ? (action ? TRUE : FALSE) : (action ? FALSE : TRUE);
 		}
 		if(exclude)
 			if(unlink(filename))

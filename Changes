@@ -1,5 +1,11 @@
 Revision history for Perl extension MIME::Explode.
 
+0.33  Tue May 25 12:01:32 WEST 2004
+	- New keywords ("content_types" and "types_action") have been
+	  added to the constructor function.
+	- Internal changes in XS file.
+	- The documentation has been updated.
+
 0.32  Sat May 22 16:37:38 WEST 2004
 	- This release adds support to detect the mime type "image/bmp".
 	- Small code cleanup.

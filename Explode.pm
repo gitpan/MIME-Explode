@@ -1,6 +1,6 @@
 #
 # Explode.pm
-# Last Modification: Sat May 22 16:10:58 WEST 2004
+# Last Modification: Tue May 25 11:39:46 WEST 2004
 #
 # Copyright (c) 2004 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
 # This module is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.32';
+$VERSION = '0.33';
 
 use constant BUFFSIZE => 64;
 
@@ -57,7 +57,8 @@ sub new {
 		mkdir              => 0,
 		decode_subject     => 0,
 		check_content_type => 0,
-		exclude_types      => [],
+		content_types      => [],
+		types_action       => "include",
 		@_,
 	};
 	bless ($self, $class);
@@ -68,22 +69,25 @@ sub parse {
 	my $self = shift;
 
 	local $/ = "\n";
-	my %ctypes = ();
 	my %headers = ();
-	my $args = {
-		output_dir     => $self->{output_dir},
-		check_ctype    => $self->{check_content_type} || 0,
-		decode_subject => $self->{decode_subject},
-	};
-	if(scalar(@{$self->{exclude_types}})) {
-		@ctypes{@{$self->{exclude_types}}} = (0 .. $#{$self->{exclude_types}});
-		$args->{ctypes} = \%ctypes;
+	my %args = (
+		'output_dir'     => $self->{'output_dir'},
+		'check_ctype'    => $self->{'check_content_type'} || 0,
+		'decode_subject' => $self->{'decode_subject'},
+		'ctypes'         => {},
+		'types_action'   => $self->{'types_action'} eq "include" ? 1 : 0,
+	);
+	$self->{'content_types'} = $self->{'exclude_types'} if(exists($self->{'exclude_types'}) && scalar(@{$self->{'exclude_types'}}));
+	if(scalar(@{$self->{'content_types'}})) {
+		my %ctypes = ();
+		@ctypes{@{$self->{'content_types'}}} = (0 .. $#{$self->{'content_types'}});
+		$args{'ctypes'} = \%ctypes;
 	}
-	if(!(-d $self->{output_dir}) && $self->{mkdir}) {
-		mkdir($self->{output_dir}, $self->{mkdir}) or
+	if(!(-d $self->{'output_dir'}) && $self->{'mkdir'}) {
+		mkdir($self->{'output_dir'}, $self->{'mkdir'}) or
 			die(join("", "MIME::Explode: Failed to create directory \"", $self->{output_dir}, "\" $!"));
 	}
-	my $last = &_parse(\@_, 1, 0, "0", "", $args, {}, \%headers);
+	my $last = &_parse(\@_, 1, 0, "0", "", \%args, {}, \%headers);
 	$self->{nmsgs} = ($last->[0]) ? (split(/\./, $last->[0]))[0] + 1 : 0;
 	my ($fh_mail, $fh_tmp) = @_;
 	if(defined($fh_tmp)) { while(<$fh_mail>) { print $fh_tmp $_; } }
@@ -174,7 +178,12 @@ sub _parse {
 		if(/$patterns[3]/o) {
 			my $file = &check_filename($files, $2);
 			my $filepath = ($args->{output_dir}) ? join("/", $args->{output_dir}, $file) : $file;
-			my $res = uu_file($fhs, $filepath, $1 || "644", $args->{ctypes});
+			my $res = uu_file($fhs, $filepath, $1 || "644",
+					{
+						action    => $args->{'types_action'},
+						mimetypes => $args->{'ctypes'}
+					}
+			);
 			$_[0]->{"$tree.$attcount"}->{'content-type'}->{value} = $res->[0];
 			$_[0]->{"$tree.$attcount"}->{'content-disposition'}->{filepath} = $filepath unless($res->[1]);
 			$attcount++;
@@ -196,10 +205,14 @@ sub _parse {
 						my $filepath = ($args->{output_dir}) ? join("/", $args->{output_dir}, $_[0]->{$tree}->{'content-disposition'}->{filename}) : $_[0]->{$tree}->{'content-disposition'}->{filename};
 						my $res = &decode_content($fhs,
 								$_[0]->{$tree}->{'content-transfer-encoding'}->{value},
-								$filepath, $args->{check_ctype},
-								$_[0]->{$tree}->{'content-type'}->{value} || "",
+								$filepath,
 								$boundary ? "--$boundary" : "",
-								$args->{ctypes});
+								{
+									mimetype  => $_[0]->{$tree}->{'content-type'}->{value} || "",
+									checktype => $args->{'check_ctype'},
+									action    => $args->{'types_action'},
+									mimetypes => $args->{'ctypes'}
+								});
 						$_[0]->{$tree}->{'content-type'}->{value} = $res->[1] if($res->[1]);
 						$_[0]->{$tree}->{'content-disposition'}->{filepath} = $filepath unless($res->[2]);
 						$tmp = 1;
@@ -260,14 +273,13 @@ sub _parse {
 					$tmpbuff = "";
 					$check_ctype = 0;
 				}
-				if(exists($args->{ctypes}) &&
-						exists($args->{ctypes}->{$_[0]->{$tree}->{'content-type'}->{value}})) {
+				if($exclude = exists($args->{'ctypes'}->{$_[0]->{$tree}->{'content-type'}->{value}}) ? ($args->{'types_action'} ? 0 : 1) :
+						scalar(keys(%{$args->{'ctypes'}})) ? ($args->{'types_action'} ? 1 : 0) : ($args->{'types_action'} ? 0 : 1)) {
 					if(defined($fh)) {
 						&file_close($fh);
 						unlink($_[0]->{$tree}->{'content-disposition'}->{filepath});
 						delete($_[0]->{$tree}->{'content-disposition'}->{filepath});
 					}
-					$exclude = 1;
 					next;
 				}
 			}
@@ -433,7 +445,8 @@ MIME::Explode - Perl extension for explode MIME messages
     mkdir              => 0755,
     decode_subject     => 1,
     check_content_type => 1,
-    exclude_types      => ["image/gif", "image/jpeg", "image/png"],
+    content_types      => ["image/gif", "image/jpeg", "image/bmp"],
+    types_action       => "exclude"
   );
 
   print "Number of messages: ", $explode->nmsgs, "\n";
@@ -485,20 +498,20 @@ available:
 
 =item output_dir
 
-directory where the decoded files are placed
+Directory where the decoded files are placed
 
 =item mkdir => octal_number
 
-if the value is set to octal number then make the output_dir directory
+If the value is set to octal number then make the output_dir directory
 (example: mkdir => 0755).
 
 =item check_content_type => 0 or 1
 
-if the value is set to 1 the content-type of file is checked
+If the value is set to 1 the content-type of file is checked
 
 =item decode_subject => 0 or 1
 
-if the value is set to 1 then the subject is decoded into a list.
+If the value is set to 1 then the subject is decoded into a list.
 
   $header->{'0.0'}->{subject}->{value} = [ARRAYREF];
   $header->{'0.0'}->{subject}->{charset} = [ARRAYREF];
@@ -506,7 +519,20 @@ if the value is set to 1 then the subject is decoded into a list.
 
 =item exclude_types => [ARRAYREF]
 
-not save files with specified content types
+Not save files with specified content types (deprecated in next versions)
+
+=item content_types => [ARRAYREF]
+
+Array reference with content types for "include" or "exclude"
+
+=item types_action => "include" or "exclude"
+
+If the action is a "include", all attached files with specified content
+types are saved but if the action is a "exclude", no files are saved
+except if its in the array of content types. If no array is specified, but
+the action is a "include", all attached files are saved, otherwise all
+files are removed if action is a "exclude". The default action is
+"include".
 
 =back
 
@@ -523,7 +549,11 @@ Returns the number of parsed messages.
 
 =head1 AUTHOR
 
-Henrique Dias <hdias@esb.ucp.pt>
+Henrique Dias <hdias@aesbuc.pt>
+
+=head1 CREDITS
+
+Thanks to Rui Castro for the revision.
 
 =head1 SEE ALSO
 
