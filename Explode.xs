@@ -1,6 +1,6 @@
 /*
  * Explode.xs
- * Last Modification: Tue Feb 25 10:44:48 WET 2003
+ * Last Modification: Thu Apr 10 15:34:04 WEST 2003
  *
  * Copyright (c) 2003 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
@@ -437,7 +437,7 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 		unsigned char *decoded = NULL;
 		unsigned char *rest = NULL;
 		SV *buff_sv = newSV(BUFFLEN);
-		char part[BUFFLEN] = "";
+		SV *part = NULL;
 		char mt[BUFFLEN] = "";
 		bool last = FALSE;
 		bool exclude = FALSE;
@@ -465,20 +465,20 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 			char *line = SvGROW(buff_sv, l);
 			if(fptmp != NULL) PerlIO_write(fptmp, line, l);
 			if(encoding[0] == 'q' && ismailbox(line)) {
-				strcpy(part, line);
+				part = newSVpvn(line, l);
 				break;
 			}
 			if(encoding[0] == 'b') {
 				if(line[0] == 0x0a && len > 0) break;
 				if(line[l-1] != 0x0a) break;
 				if(strchr(line, ' ')) {
-					strcpy(part, line);
+					part = newSVpvn(line, l);
 					break;
 				}
 			}
 			if(rest = instr(line, boundary)) {
-				strcpy(part, rest);
-				l -= strlen(part);
+				part = newSVpvn(rest, strlen(rest));
+				l -= SvCUR(part);
 				if(l == 0) break;
 				line[l] = '\0';
 				last = TRUE;
@@ -507,7 +507,7 @@ exp_decode_content(fhs, encoding="base64", filename, checktype = 0, mimetype, bo
 		if(exclude)
 			if(unlink(filename))
 				croak("Failed to delete file \"%s\"", filename);
-		av_push(av_ret, part ? newSVpv(part, 0) : newSVsv(&sv_undef));
+		av_push(av_ret, part ? part : newSVsv(&sv_undef));
 		av_push(av_ret, mt ? newSVpv(mt, 0) : newSVsv(&sv_undef));
 		av_push(av_ret, newSViv(exclude ? 1 : 0));
 		XPUSHs(sv_2mortal(newRV_noinc((SV*)av_ret)));
