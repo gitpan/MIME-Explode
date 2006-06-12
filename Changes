@@ -1,5 +1,9 @@
 Revision history for Perl extension MIME::Explode.
 
+0.38  Mon Jun  5 15:05:22 WEST 2006
+	- Several serious memory leaks were fixed.
+	  Thanks to Bryan Henderson <bryanh@giraffe-data.com>
+
 0.37  Tue Oct 26 19:23:34 WEST 2004
 	- The deep recursion on subroutine "MIME::Explode::_parse" has
 	  been fixed.

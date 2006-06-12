@@ -1,8 +1,8 @@
 /*
  * Explode.xs
- * Last Modification: Thu Jul 29 14:03:51 WEST 2004
+ * Last Modification: Mon Jun  5 14:13:27 WEST 2006
  *
- * Copyright (c) 2004 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
+ * Copyright (c) 2006 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
  * This module is free software; you can redistribute it and/or modify
  * it under the same terms as Perl itself.
  *
@@ -340,8 +340,11 @@ exp_rfc822_qprint(source)
 		unsigned char *s;
 	PPCODE:
 		s = (unsigned char*)SvPV(source, srcl);
-		if(s = _rfc822_qprint(s, (unsigned long)srcl, &len))
+		if(s = _rfc822_qprint(s, (unsigned long)srcl, &len)) {
 			XPUSHs(sv_2mortal(newSVpv((char*)s, (STRLEN)len)));
+			Safefree(s);
+		}
+
 
 void
 exp_rfc822_base64(source)
@@ -352,9 +355,10 @@ exp_rfc822_base64(source)
 		unsigned char *s;
 	PPCODE:
 		s = (unsigned char*)SvPV(source, srcl);
-		if(s = _rfc822_base64(s, (unsigned long)srcl, &len))
-			XPUSHs(sv_2mortal(newSVpv((char*)s, (STRLEN)len)));		
-
+		if(s = _rfc822_base64(s, (unsigned long)srcl, &len)) {
+			XPUSHs(sv_2mortal(newSVpv((char*)s, (STRLEN)len)));
+			Safefree(s);
+		}
 
 void
 exp_set_content_type(source, ...)
@@ -426,13 +430,22 @@ exp_uu_file(fhs, filename, mode, ...)
 				if(len) PerlIO_write(fpout, decoded, len);
 			}
 			if(verify) {
-				if(line[0] == 0x20 || line[0] == 0x0a || line[0] == 0x0d) continue;
-				data_cat(tmp, decoded, &tmplen, len);
-				if(tmplen < TMPBUFFLEN) continue;
-				strcpy(mimetype, set_mime_type(tmp, tmplen, mimetype));
-				exclude = hv_exists(hvtypes, mimetype, strlen(mimetype)) ? (action ? FALSE : TRUE) :
-					hv_iterinit(hvtypes) ? (action ? TRUE : FALSE) : (action ? FALSE : TRUE);
-				verify = FALSE;
+				if(line[0] == 0x20 || line[0] == 0x0a || line[0] == 0x0d) {
+					// nothing to do...
+				} else {
+					data_cat(tmp, decoded, &tmplen, len);
+					if(tmplen >= TMPBUFFLEN) {
+						strcpy(mimetype, set_mime_type(tmp, tmplen, mimetype));
+						exclude = hv_exists(hvtypes, mimetype, strlen(mimetype)) ? (action ? FALSE : TRUE) :
+							hv_iterinit(hvtypes) ? (action ? TRUE : FALSE) : (action ? FALSE : TRUE);
+						verify = FALSE;
+					}
+				}
+			}
+			if (decoded) {
+				Safefree(decoded);
+				decoded = NULL;
+				len = 0;
 			}
 		}
 		PerlIO_close(fpout);
@@ -448,6 +461,7 @@ exp_uu_file(fhs, filename, mode, ...)
 		av_push(av_ret, mimetype ? newSVpv(mimetype, 0) : newSVsv(&sv_undef));
 		av_push(av_ret, newSViv(exclude ? 1 : 0));
 		XPUSHs(sv_2mortal(newRV_noinc((SV*)av_ret)));
+		SvREFCNT_dec(buff_sv);
 
 
 void
@@ -463,7 +477,7 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 		unsigned char *decoded = NULL;
 		unsigned char *rest = NULL;
 		SV *buff_sv = newSV(BUFFLEN);
-		SV *part = NULL;
+		SV *part = newSVsv(&sv_undef);
 		char mt[BUFFLEN] = "";
 		bool exclude = FALSE;
 		bool verify = TRUE;
@@ -512,13 +526,13 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 		}
 		if((fpout = PerlIO_open(filename, "wb")) == NULL)
 			croak("Failed to open file \"%s\"", filename);
-		while(sv_gets(buff_sv, fpin, 0)) {
+		while(!last && sv_gets(buff_sv, fpin, 0)) {
 			STRLEN l = SvCUR(buff_sv);
 			char *line = SvGROW(buff_sv, l);
 			if(fptmp != NULL) PerlIO_write(fptmp, line, l);
 			if(findmbox == YES) {
 				if(ismailbox(line)) {
-					part = newSVpvn(line, l);
+					sv_setsv(part, buff_sv);
 					break;
 				}
 				findmbox = MAYBE;
@@ -532,13 +546,13 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 				if(line[l-2] == '=' && line[l-1] == 0x0a) endbase64 = MAYBE;
 			}
 			if(boundary[0] != '\0' && (rest = instr(line, boundary))) {
-				part = newSVpvn(rest, strlen(rest));
+				sv_setpvn(part, rest, strlen(rest));
 				l -= SvCUR(part);
 				if(l == 0) break;
 				line[l] = '\0';
 				last = TRUE;
 			} else if(endbase64 == YES && line[0] != 0x0a) {
-				part = newSVpvn(line, l);
+				sv_setpvn(part, line, l);
 				break;
 			}
 			if(!exclude) {
@@ -546,16 +560,26 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 					_rfc822_qprint(line, l, &len) : _rfc822_base64(line, l, &len);
 				if(len) PerlIO_write(fpout, decoded, len);
 			}
-			if(last) break;
-			if(endbase64 == MAYBE) endbase64 = YES;
-			if(verify) {
-				if((encoding[0] == 'b' && line[0] == 0x20) || line[0] == 0x0a || line[0] == 0x0d) continue;
-				data_cat(tmp, decoded, &tmplen, len);
-				if(tmplen < TMPBUFFLEN) continue;
-				strcpy(mt, (checktype) ? set_mime_type(tmp, tmplen, mimetype) : mimetype);
-				exclude = hv_exists(hvtypes, mt, strlen(mt)) ? (action ? FALSE : TRUE) :
-					hv_iterinit(hvtypes) ? (action ? TRUE : FALSE) : (action ? FALSE : TRUE);
-				verify = FALSE;
+			if(!last) {
+				if(endbase64 == MAYBE) endbase64 = YES;
+				if(verify) {
+					if((encoding[0] == 'b' && line[0] == 0x20) || line[0] == 0x0a || line[0] == 0x0d) {
+						// nothing to do...
+					} else {
+						data_cat(tmp, decoded, &tmplen, len);
+						if(tmplen >= TMPBUFFLEN) {
+							strcpy(mt, (checktype) ? set_mime_type(tmp, tmplen, mimetype) : mimetype);
+							exclude = hv_exists(hvtypes, mt, strlen(mt)) ? (action ? FALSE : TRUE) :
+								hv_iterinit(hvtypes) ? (action ? TRUE : FALSE) : (action ? FALSE : TRUE);
+							verify = FALSE;
+						}
+					}
+				}
+			}
+			if(decoded) {
+				Safefree(decoded);
+				decoded = NULL;
+				len = 0;
 			}
 		}
 		PerlIO_close(fpout);
@@ -567,7 +591,8 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 		if(exclude)
 			if(unlink(filename))
 				croak("Failed to delete file \"%s\"", filename);
-		av_push(av_ret, part ? part : newSVsv(&sv_undef));
+		av_push(av_ret, part);
 		av_push(av_ret, mt ? newSVpv(mt, 0) : newSVsv(&sv_undef));
 		av_push(av_ret, newSViv(exclude ? 1 : 0));
 		XPUSHs(sv_2mortal(newRV_noinc((SV*)av_ret)));
+		SvREFCNT_dec(buff_sv);
