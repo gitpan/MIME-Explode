@@ -1,8 +1,9 @@
 #
 # Explode.pm
-# Last Modification: Mon Jun  5 14:13:53 WEST 2006
+# Last Modification: Sun Jun 26 21:19:40 WEST 2011
 #
-# Copyright (c) 2006 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
+# Copyright (c) 2011 Henrique Dias <henrique.ribeiro.dias@gmail.com>.
+# All rights reserved.
 # This module is free software; you can redistribute it and/or modify
 # it under the same terms as Perl itself.
 #
@@ -20,7 +21,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 @ISA = qw(Exporter DynaLoader);
 @EXPORT = qw(&rfc822_base64 &rfc822_qprint);
-$VERSION = '0.38';
+$VERSION = '0.39';
 
 use constant BUFFSIZE => 64;
 
@@ -585,7 +586,7 @@ directory. If an error happens returns it.
 
 =head1 AUTHOR
 
-Henrique Dias <hdias@aesbuc.pt>
+Henrique Dias <henrique.ribeiro.dias@gmail.com>
 
 =head1 CREDITS
 

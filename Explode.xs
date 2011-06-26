@@ -1,8 +1,9 @@
 /*
  * Explode.xs
- * Last Modification: Mon Jun  5 14:13:27 WEST 2006
+ * Last Modification: Sun Jun 26 21:17:45 WEST 2011
  *
- * Copyright (c) 2006 Henrique Dias <hdias@aesbuc.pt>. All rights reserved.
+ * Copyright (c) 2011 Henrique Dias <henrique.ribeiro.dias@gmail.com>.
+ * All rights reserved.
  * This module is free software; you can redistribute it and/or modify
  * it under the same terms as Perl itself.
  *
@@ -369,7 +370,7 @@ exp_set_content_type(source, ...)
 		char *base = NULL;
 		char *mt;
 	PPCODE:
-		if(items == 2) base = SvPV(ST(1), na);
+		if(items == 2) base = SvPV(ST(1), PL_na);
 		s = (unsigned char*)SvPV(source, srcl);
 		mt = set_mime_type(s, (unsigned long)srcl, base);
 		XPUSHs(sv_2mortal(newSVpv(mt, (STRLEN)strlen(mt))));
@@ -458,7 +459,7 @@ exp_uu_file(fhs, filename, mode, ...)
 			if(unlink(filename))
 				croak("Failed to delete file \"%s\"", filename);
 
-		av_push(av_ret, mimetype ? newSVpv(mimetype, 0) : newSVsv(&sv_undef));
+		av_push(av_ret, mimetype ? newSVpv(mimetype, 0) : newSVsv(&PL_sv_undef));
 		av_push(av_ret, newSViv(exclude ? 1 : 0));
 		XPUSHs(sv_2mortal(newRV_noinc((SV*)av_ret)));
 		SvREFCNT_dec(buff_sv);
@@ -477,7 +478,7 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 		unsigned char *decoded = NULL;
 		unsigned char *rest = NULL;
 		SV *buff_sv = newSV(BUFFLEN);
-		SV *part = newSVsv(&sv_undef);
+		SV *part = newSVsv(&PL_sv_undef);
 		char mt[BUFFLEN] = "";
 		bool exclude = FALSE;
 		bool verify = TRUE;
@@ -505,7 +506,7 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 			HV *hv = (HV*)SvRV(ST(4));
 			if(hv_exists(hv, "mimetype", 8)) {
 				SV **value = hv_fetch(hv, "mimetype", 8, 0);
-				mimetype = SvPVx(*value, na);
+				mimetype = SvPVx(*value, PL_na);
 			}
 			if(hv_exists(hv, "checktype", 9)) {
 				SV **value = hv_fetch(hv, "checktype", 9, 0);
@@ -592,7 +593,7 @@ exp_decode_content(fhs, encoding="base64", filename, boundary="", ...)
 			if(unlink(filename))
 				croak("Failed to delete file \"%s\"", filename);
 		av_push(av_ret, part);
-		av_push(av_ret, mt ? newSVpv(mt, 0) : newSVsv(&sv_undef));
+		av_push(av_ret, mt ? newSVpv(mt, 0) : newSVsv(&PL_sv_undef));
 		av_push(av_ret, newSViv(exclude ? 1 : 0));
 		XPUSHs(sv_2mortal(newRV_noinc((SV*)av_ret)));
 		SvREFCNT_dec(buff_sv);

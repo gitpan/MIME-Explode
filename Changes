@@ -1,5 +1,10 @@
 Revision history for Perl extension MIME::Explode.
 
+0.39  Sun Jun 26 21:21:26 WEST 2011
+	- Internal changes in XS file. The global variable "na" has changed
+	  to "PL_na" and the "sv_undef" variable to "PL_sv_undef".
+	  Thanks to Pascal Terjan for the patch.
+
 0.38  Mon Jun  5 15:05:22 WEST 2006
 	- Several serious memory leaks were fixed.
 	  Thanks to Bryan Henderson <bryanh@giraffe-data.com>

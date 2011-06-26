@@ -5,7 +5,7 @@ use ExtUtils::MakeMaker;
 my @ppd = ();
 if ($] >= 5.00503) {
 	@ppd = (
-		'AUTHOR'   => 'Henrique Dias <hdias@esb.ucp.pt>',
+		'AUTHOR'   => 'Henrique Dias <henrique.ribeiro.dias@gmail.com>',
 		'ABSTRACT' => 'Extension for explode MIME messages',
 	);
 }
@@ -14,6 +14,7 @@ WriteMakefile(
 	'NAME'         => 'MIME::Explode',
 	'DISTNAME'     => 'MIME-Explode',
 	'VERSION_FROM' => 'Explode.pm', # finds $VERSION
+	'LICENSE'      => 'perl',
 	'LIBS'         => [''],   # e.g., '-lm' 
 	'DEFINE'       => '',     # e.g., '-DHAVE_SOMETHING' 
 	'INC'          => '',     # e.g., '-I/usr/include/other' 
